@@ -25,6 +25,7 @@ export function resetDb(url: string): LibSQLDatabase {
   _client?.close();
   _client = createClient({ url });
   _db = drizzle(_client);
+  _pushed = false;
   return _db;
 }
 
