@@ -3,7 +3,7 @@
   "tasks": {
     "check": "deno fmt --check && deno lint && deno check **/*.ts && deno check **/*.tsx",
     "manifest": "echo \"import '\\$fresh/src/dev/cli.ts'\" | deno run -A - manifest $(pwd)",
-    "test": "deno test -A --no-check . ../src-recorder/",
+    "test": "cd .. && deno test -A --no-check --config=src/deno.json src/ src-recorder/",
     "start": "deno run -A --watch=static/,routes/ dev.ts",
     "build": "deno run -A dev.ts build",
     "build:recorder": "deno run -A ../src-recorder/build.ts",
