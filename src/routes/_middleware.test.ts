@@ -57,6 +57,24 @@ Deno.test("Middleware: blocks /api/stream without token", async () => {
   assertEquals(resp.status, 303);
 });
 
+Deno.test("Middleware: blocks /api/playtests without token", async () => {
+  const req = new Request("http://test/api/playtests");
+  const resp = await handler(mockCtx(req));
+  assertEquals(resp.status, 303);
+});
+
+Deno.test("Middleware: blocks /api/playtests/xyz without token", async () => {
+  const req = new Request("http://test/api/playtests/xyz");
+  const resp = await handler(mockCtx(req));
+  assertEquals(resp.status, 303);
+});
+
+Deno.test("Middleware: blocks /api/sessions without token", async () => {
+  const req = new Request("http://test/api/sessions?playtestId=x");
+  const resp = await handler(mockCtx(req));
+  assertEquals(resp.status, 303);
+});
+
 Deno.test("Middleware: allows / with valid token cookie", async () => {
   const req = new Request("http://test/", {
     headers: { "cookie": "token=dev" },

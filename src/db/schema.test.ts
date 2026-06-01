@@ -1,11 +1,11 @@
 import { assertEquals } from "$std/assert/mod.ts";
-import { createDb } from "./db.ts";
+import { resetDb } from "./db.ts";
 import { push } from "./push.ts";
 import { playtests, sessions } from "./schema.ts";
 import { eq } from "drizzle-orm";
 
 Deno.test("Schema: playtests insert and select roundtrip", async () => {
-  const { db, client } = createDb(":memory:");
+  const db = resetDb(":memory:");
   await push(db);
 
   const id = crypto.randomUUID();
@@ -23,12 +23,10 @@ Deno.test("Schema: playtests insert and select roundtrip", async () => {
   assertEquals(row?.availableSlots, 5);
   assertEquals(row?.requestMic, 1);
   assertEquals(row?.createdAt, now);
-
-  client.close();
 });
 
 Deno.test("Schema: sessions insert and select roundtrip", async () => {
-  const { db, client } = createDb(":memory:");
+  const db = resetDb(":memory:");
   await push(db);
 
   const playtestId = crypto.randomUUID();
@@ -53,12 +51,10 @@ Deno.test("Schema: sessions insert and select roundtrip", async () => {
   assertEquals(row?.status, "recording");
   assertEquals(row?.chunkCount, 0);
   assertEquals(row?.duration, null);
-
-  client.close();
 });
 
 Deno.test("Schema: default values on sessions", async () => {
-  const { db, client } = createDb(":memory:");
+  const db = resetDb(":memory:");
   await push(db);
 
   const playtestId = crypto.randomUUID();
@@ -80,6 +76,4 @@ Deno.test("Schema: default values on sessions", async () => {
   assertEquals(rows.length, 1);
   assertEquals(rows[0].status, "recording");
   assertEquals(rows[0].chunkCount, 0);
-
-  client.close();
 });
