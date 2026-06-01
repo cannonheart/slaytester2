@@ -37,6 +37,7 @@
     "npm:preact-render-to-string@^6.6.3": "6.7.0_preact@10.29.2",
     "npm:preact@^10.28.2": "10.29.2",
     "npm:preact@^10.29.1": "10.29.2",
+    "npm:tailwindcss@4": "4.3.0",
     "npm:zod@^4.4.3": "4.4.3"
   },
   "jsr": {
@@ -816,6 +817,7 @@
       "npm:@preact/signals@^2.9.0",
       "npm:drizzle-orm@~0.45.2",
       "npm:preact@^10.29.1",
+      "npm:tailwindcss@4",
       "npm:zod@^4.4.3"
     ]
   }
