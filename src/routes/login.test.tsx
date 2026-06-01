@@ -2,9 +2,13 @@ import { assertEquals, assertStringIncludes } from "$std/assert/mod.ts";
 import "../lib/env.ts";
 import { handler } from "./login.tsx";
 
+function mockCtx(req: Request) {
+  return { req, url: new URL(req.url), state: {} } as any;
+}
+
 Deno.test("Login: GET returns 200 with login form", async () => {
   const req = new Request("http://test/login");
-  const resp = await handler.GET(req, {} as any);
+  const resp = await handler.GET(mockCtx(req));
   assertEquals(resp.status, 200);
   const text = await resp.text();
   assertStringIncludes(text, "token");
@@ -18,7 +22,7 @@ Deno.test("Login: POST with correct token sets cookie and redirects to /", async
     method: "POST",
     body: form,
   });
-  const resp = await handler.POST(req, {} as any);
+  const resp = await handler.POST(mockCtx(req));
   assertEquals(resp.status, 303);
   assertEquals(resp.headers.get("location"), "/");
   const cookie = resp.headers.get("set-cookie") ?? "";
@@ -34,7 +38,7 @@ Deno.test("Login: POST with empty token returns 400", async () => {
     method: "POST",
     body: form,
   });
-  const resp = await handler.POST(req, {} as any);
+  const resp = await handler.POST(mockCtx(req));
   assertEquals(resp.status, 400);
 });
 
@@ -45,7 +49,7 @@ Deno.test("Login: POST with wrong token returns 200 with error", async () => {
     method: "POST",
     body: form,
   });
-  const resp = await handler.POST(req, {} as any);
+  const resp = await handler.POST(mockCtx(req));
   assertEquals(resp.status, 200);
   const text = await resp.text();
   assertStringIncludes(text, "Invalid");

@@ -1,12 +1,13 @@
-import { Handlers } from "$fresh/server.ts";
 import { checkToken } from "../lib/auth.ts";
+import { Handlers } from "fresh/compat";
 
 export const handler: Handlers = {
   GET() {
     return renderPage(null);
   },
 
-  async POST(req) {
+  async POST(ctx) {
+    const req = ctx.req;
     const form = await req.formData();
     const token = form.get("token") as string | null;
     if (!token || !checkToken(token)) {
@@ -20,7 +21,9 @@ export const handler: Handlers = {
       status: 303,
       headers: {
         Location: "/",
-        "Set-Cookie": `token=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/`,
+        "Set-Cookie": `token=${
+          encodeURIComponent(token)
+        }; HttpOnly; SameSite=Lax; Path=/`,
       },
     });
   },
@@ -39,7 +42,11 @@ function renderPage(error: string | null): Response {
 <body class="min-h-screen flex items-center justify-center bg-gray-50">
   <div class="bg-white p-8 rounded-2xl shadow-sm border max-w-sm w-full">
     <h1 class="text-2xl font-bold text-center mb-6">Slaytester 2</h1>
-    ${error ? `<p class="text-red-500 text-sm text-center mb-4">${error}</p>` : ""}
+    ${
+      error
+        ? `<p class="text-red-500 text-sm text-center mb-4">${error}</p>`
+        : ""
+    }
     <form method="POST" class="flex flex-col gap-4">
       <input
         type="password"

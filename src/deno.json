@@ -1,32 +1,28 @@
 {
-  "lock": false,
   "tasks": {
-    "check": "deno fmt --check && deno lint && deno check **/*.ts && deno check **/*.tsx",
-    "manifest": "echo \"import '\\$fresh/src/dev/cli.ts'\" | deno run -A - manifest $(pwd)",
+    "check": "deno fmt --check && deno lint && deno check",
     "test": "deno test -A --no-check . ../src-recorder/",
     "start": "deno run -A --watch=static/,routes/ dev.ts",
     "build": "deno run -A dev.ts build",
     "build:recorder": "deno run -A ../src-recorder/build.ts",
-    "preview": "deno run -A main.ts",
-    "update": "deno run -A -r https://fresh.deno.dev/update ."
+    "preview": "deno serve -A _fresh/server.js",
+    "update": "deno run -A -r jsr:@fresh/update ."
   },
   "lint": { "rules": { "tags": ["fresh", "recommended"] } },
   "exclude": ["**/_fresh/*"],
   "nodeModulesDir": "none",
   "imports": {
-    "$fresh/": "https://deno.land/x/fresh@2.3.3/",
-    "preact": "https://esm.sh/preact@10.22.0",
+    "preact": "npm:preact@^10.29.1",
     "preact/": "https://esm.sh/preact@10.22.0/",
-    "preact-render-to-string": "https://esm.sh/preact-render-to-string@6.5.0",
-    "@preact/signals": "https://esm.sh/*@preact/signals@1.2.2",
-    "@preact/signals-core": "https://esm.sh/*@preact/signals-core@1.5.1",
+    "@preact/signals": "npm:@preact/signals@^2.9.0",
     "$std/": "https://deno.land/std@0.216.0/",
     "tailwindcss": "npm:tailwindcss@3.4.1",
     "tailwindcss/": "npm:/tailwindcss@3.4.1/",
     "drizzle-orm": "npm:drizzle-orm@^0.45.2",
     "drizzle-orm/": "npm:/drizzle-orm@^0.45.2/",
     "@libsql/client": "npm:@libsql/client@^0.15.2",
-    "zod": "npm:zod@^4.4.3"
+    "zod": "npm:zod@^4.4.3",
+    "fresh": "jsr:@fresh/core@^2.3.3"
   },
   "compilerOptions": { "jsx": "react-jsx", "jsxImportSource": "preact" },
   "lib": ["dom"]

@@ -1,4 +1,4 @@
-import { FreshContext } from "$fresh/server.ts";
+import { FreshContext } from "fresh";
 import { isAuthorized } from "../lib/auth.ts";
 
 const PUBLIC_PATHS = new Set(["/login"]);
@@ -16,7 +16,9 @@ const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-export async function handler(req: Request, ctx: FreshContext) {
+export async function handler(ctx: FreshContext) {
+  const req = ctx.req;
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS_HEADERS });
   }

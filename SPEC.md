@@ -5,10 +5,10 @@ A super simple web game recording platform. Game devs add a `<script>` tag to th
 
 ## Tech Stack
 - **Runtime**: Deno 2
-- **Web Framework**: Fresh 2 (file-based routing, islands, Preact SSR)
+- **Web Framework**: Fresh 2.x (JSR `@fresh/core`, Builder mode)
 - **Database**: SQLite via `@libsql/client` + Drizzle ORM (playtest + session metadata)
 - **Storage**: Filesystem (video chunks)
-- **Styling**: Tailwind CSS 3 (via Fresh plugin)
+- **Styling**: Tailwind CSS (via `@fresh/plugin-tailwind`)
 - **Recorder bundler**: esbuild (IIFE, es2020 target)
 - **Language**: TypeScript / TSX
 - **Infrastructure**: Zero external services — no Docker, no PostgreSQL, no S3
