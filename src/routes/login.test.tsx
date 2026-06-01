@@ -1,9 +1,18 @@
 import { assertEquals, assertStringIncludes } from "$std/assert/mod.ts";
+import { render } from "preact-render-to-string";
 import "../lib/env.ts";
 import { handler } from "./login.tsx";
 
 function mockCtx(req: Request) {
-  return { req, url: new URL(req.url), state: {} } as any;
+  return {
+    req,
+    url: new URL(req.url),
+    state: {},
+    render: (vnode: any) => {
+      const body = render(vnode);
+      return new Response(body, { headers: { "content-type": "text/html" } });
+    },
+  } as any;
 }
 
 Deno.test("Login: GET returns 200 with login form", async () => {
@@ -11,7 +20,8 @@ Deno.test("Login: GET returns 200 with login form", async () => {
   const resp = await handler.GET(mockCtx(req));
   assertEquals(resp.status, 200);
   const text = await resp.text();
-  assertStringIncludes(text, "token");
+  assertStringIncludes(text, "Slaytester 2");
+  assertStringIncludes(text, "Admin Token");
   assertStringIncludes(text, "form");
 });
 
