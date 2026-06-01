@@ -6,11 +6,12 @@ A super simple web game recording platform. Game devs add a `<script>` tag to th
 ## Tech Stack
 - **Runtime**: Deno 2
 - **Web Framework**: Fresh 2 (file-based routing, islands, Preact SSR)
-- **Storage**: Deno KV (playtest + session metadata) + Filesystem (video chunks)
+- **Database**: SQLite via `@libsql/client` + Drizzle ORM (playtest + session metadata)
+- **Storage**: Filesystem (video chunks)
 - **Styling**: Tailwind CSS 3 (via Fresh plugin)
 - **Recorder bundler**: esbuild (IIFE, es2020 target)
 - **Language**: TypeScript / TSX
-- **Infrastructure**: Zero external services — no Docker, no database server, no S3
+- **Infrastructure**: Zero external services — no Docker, no PostgreSQL, no S3
 
 ## Architecture
 
@@ -34,39 +35,72 @@ Browser (player)                 Slaytester 2 Server
                                  │ /session/:id   [auth]      │
                                  │ /login         [no auth]   │
                                  │                            │
-                                 │ Deno KV ─── metadata       │
+                                 │ SQLite ─── metadata         │
                                  │ data/ ───── video chunks   │
                                  └────────────────────────────┘
 ```
 
-## Data Model (Deno KV)
+## Data Model (SQLite + Drizzle ORM)
 
+### Schema (`src/db/schema.ts`)
+
+```typescript
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+
+export const playtests = sqliteTable("playtests", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  availableSlots: integer("available_slots").notNull(),
+  requestMic: integer("request_mic").notNull().default(1),
+  createdAt: integer("created_at").notNull(),
+});
+
+export const sessions = sqliteTable("sessions", {
+  id: text("id").primaryKey(),
+  playtestId: text("playtest_id").notNull(),
+  createdAt: integer("created_at").notNull(),
+  status: text("status").notNull().default("recording"),
+  chunkCount: integer("chunk_count").default(0),
+  duration: real("duration"),
+});
 ```
-["playtest", playtestId] → {
-  id: string,
-  name: string,
-  availableSlots: number,
-  requestMic: boolean,
-  createdAt: number,
-}
 
-["session", sessionId] → {
-  id: string,
-  playtestId: string,
-  createdAt: number,
-  status: "recording" | "finalized" | "failed",
-  chunkCount: number,
-  duration: number | null,
-}
+### Query Patterns
 
-["session_by_playtest", playtestId, sessionId] → true
+```typescript
+// Server sets itself up:
+await db.run(sql`CREATE TABLE IF NOT EXISTS ...`)
+
+// All playtests
+db.select().from(playtests).orderBy(desc(playtests.createdAt)).all()
+
+// Single playtest
+db.select().from(playtests).where(eq(playtests.id, id)).get()
+
+// Sessions for playtest (ordered)
+db.select().from(sessions)
+  .where(eq(sessions.playtestId, playtestId))
+  .orderBy(desc(sessions.createdAt))
+  .all()
+
+// Average duration
+db.select({ avg: avg(sessions.duration) })
+  .from(sessions)
+  .where(eq(sessions.playtestId, playtestId))
+  .get()
+
+// Slot claim (transactional)
+await db.transaction(async (tx) => {
+  const p = tx.select().from(playtests)
+    .where(eq(playtests.id, id)).get();
+  if (!p || p.availableSlots <= 0) throw new Error("no slots");
+  tx.update(playtests)
+    .set({ availableSlots: p.availableSlots - 1 })
+    .where(eq(playtests.id, id))
+    .run();
+  tx.insert(sessions).values({ id: sessionId, ... }).run();
+});
 ```
-
-Lookup patterns:
-- All playtests: `kv.list({prefix: ["playtest"]})`
-- Single playtest: `kv.get(["playtest", id])` → update in place
-- Sessions for playtest: `kv.list({prefix: ["session_by_playtest", playtestId]})` → batch `kv.get(["session", sessionId])`
-- Single session: `kv.get(["session", id])`
 
 ## Recorder Flow
 
@@ -165,6 +199,9 @@ Playback merges chunks server-side using the same `mp4.ts` logic from slaytester
 | `src/lib/env.ts` | Unchanged (.env loader) |
 | `src/lib/default-recorder-conf.ts` | Unchanged |
 | `src/islands/Playback.tsx` | Update stream URL → `/api/stream?sessionId=X` |
+| `src/db/schema.ts` | New — Drizzle SQLite schema (playtests + sessions) |
+| `src/db/db.ts` | New — SQLite client + drizzle setup |
+| `src/db/push.ts` | New — CREATE TABLE on startup |
 
 ## Project Structure
 
@@ -177,6 +214,10 @@ slaytester2/
 │   ├── dev.ts
 │   ├── main.ts
 │   ├── tailwind.config.ts
+│   ├── db/
+│   │   ├── schema.ts             # Drizzle SQLite tables
+│   │   ├── db.ts                 # Client + drizzle init
+│   │   └── push.ts               # CREATE TABLE on startup
 │   ├── routes/
 │   │   ├── _app.tsx
 │   │   ├── _middleware.ts        # CORS + token auth
@@ -206,7 +247,6 @@ slaytester2/
 │   │   └── Card.tsx
 │   ├── lib/
 │   │   ├── env.ts
-│   │   ├── kv.ts
 │   │   ├── auth.ts
 │   │   ├── mp4.ts
 │   │   └── default-recorder-conf.ts
@@ -234,7 +274,7 @@ slaytester2/
 ADMIN_TOKEN=some-secret-string
 ```
 
-That's it — one env var. No database URL, no S3 config, no Docker.
+That's it — one env var. SQLite database file lives at `data/slaytester.db` (auto-created). No Docker, no S3, no PostgreSQL.
 
 ## Out of Scope (v1)
 - Multi-user / teams
