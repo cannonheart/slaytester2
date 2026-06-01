@@ -5,6 +5,7 @@ const PUBLIC_PATHS = new Set(["/login"]);
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
+  if (pathname === "/api/health") return true;
   if (pathname.startsWith("/api/recorder/")) return true;
   if (/\.\w+$/.test(pathname)) return true;
   return false;

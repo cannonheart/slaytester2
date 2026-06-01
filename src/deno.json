@@ -16,13 +16,12 @@
     "preact/": "https://esm.sh/preact@10.22.0/",
     "@preact/signals": "npm:@preact/signals@^2.9.0",
     "$std/": "https://deno.land/std@0.216.0/",
-    "tailwindcss": "npm:tailwindcss@3.4.1",
-    "tailwindcss/": "npm:/tailwindcss@3.4.1/",
     "drizzle-orm": "npm:drizzle-orm@^0.45.2",
     "drizzle-orm/": "npm:/drizzle-orm@^0.45.2/",
     "@libsql/client": "npm:@libsql/client@^0.15.2",
     "zod": "npm:zod@^4.4.3",
-    "fresh": "jsr:@fresh/core@^2.3.3"
+    "fresh": "jsr:@fresh/core@^2.3.3",
+    "@fresh/plugin-tailwind": "jsr:@fresh/plugin-tailwind@^1.0.0"
   },
   "compilerOptions": { "jsx": "react-jsx", "jsxImportSource": "preact" },
   "lib": ["dom"]
