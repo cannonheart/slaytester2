@@ -42,6 +42,7 @@ export const defaultRecorderConfig = {
 }
 
 .st-footer {
+  display: block;
   margin:1.5rem 0 0;
   font-size:0.8rem;
   color:#2b001855;

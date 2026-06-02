@@ -83,8 +83,10 @@ export function showConsentPopup(
     onNo();
   });
 
-  const footer = document.createElement("p");
+  const footer = document.createElement("a");
   footer.className = "st-footer";
+  footer.href = "https://slaytester.com";
+  footer.target = "_blank";
   footer.textContent = config.popupFooter;
   card.appendChild(footer);
 }
