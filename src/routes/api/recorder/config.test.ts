@@ -27,6 +27,7 @@ Deno.test("Recorder config: returns availableSlots and requestMic", async () => 
   const body = await resp.json();
   assertEquals(body.availableSlots, 5);
   assertEquals(body.requestMic, 1);
+  assertEquals(body.maxDurationMinutes, 60);
 });
 
 Deno.test("Recorder config: returns availableSlots 0 when slotless", async () => {

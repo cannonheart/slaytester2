@@ -19,6 +19,7 @@ export const handler = {
     return Response.json({
       availableSlots: pt.availableSlots,
       requestMic: pt.requestMic,
+      maxDurationMinutes: parseInt(Deno.env.get("RECORDING_MAX_DURATION_MINUTES")!, 10),
     });
   },
 };
