@@ -33,6 +33,12 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
       const config = { ...defaultRecorderConfig, ...serverConfig, apiBase: BASE };
       console.log("[Slaytester] config received:", config);
 
+      // Check if already joined this playtest
+      if (localStorage.getItem(`st-joined-${playtestId}`)) {
+        showAlreadyJoined(config);
+        return;
+      }
+
       showConsentPopup(config, () => {
         // Claim a slot
         fetch(`${BASE}/api/recorder/session`, {
@@ -53,6 +59,7 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
             if (!data?.sessionId) return;
             const sessionId = data.sessionId;
             console.log("[Slaytester] session claimed:", sessionId);
+            localStorage.setItem(`st-joined-${playtestId}`, sessionId);
 
             if (!config.requestMic) {
               startRecording(config, sessionId, null);
@@ -101,6 +108,31 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
     const btn = document.createElement("button");
     btn.className = "st-btn-yes st-btn";
     btn.textContent = "OK";
+    btn.addEventListener("click", () => document.body.removeChild(overlay));
+    card.appendChild(btn);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    const styleId = "st-style";
+    if (!document.getElementById(styleId)) {
+      const el = document.createElement("style");
+      el.id = styleId;
+      el.textContent = config.css as string;
+      document.head.appendChild(el);
+    }
+  }
+
+  function showAlreadyJoined(config: Record<string, unknown>) {
+    const overlay = document.createElement("div");
+    overlay.className = "st-overlay";
+    const card = document.createElement("div");
+    card.className = "st-card";
+    const p = document.createElement("p");
+    p.className = "st-text";
+    p.textContent = "You've already joined this playtest. Thanks!";
+    card.appendChild(p);
+    const btn = document.createElement("button");
+    btn.className = "st-btn-yes st-btn";
+    btn.textContent = "I'll just play the game then";
     btn.addEventListener("click", () => document.body.removeChild(overlay));
     card.appendChild(btn);
     overlay.appendChild(card);
