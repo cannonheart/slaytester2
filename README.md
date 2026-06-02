@@ -1,8 +1,10 @@
 # Slaytester 2
 
-A feedback comment is good, but seeing a player spectacularly fail to select the best card is enlightening.
+A player writing a commend with feedback is good, but seeing a player spectacularly fail to find the end of the level is enlightening.
 
-Slaytester makes it easier for players to give you good feedback, by letting them record themselves playing your game with the click of a button. You insert a single line of html into your game, and Slaytester takes it from there.
+Slaytester lets players record themselves playing your webgame with the click of a button.  
+
+You insert a single line of html into your game, and Slaytester takes it from there.
 
 Slaytester records (after clearly asking for consent):
 - the games canvas element
@@ -13,7 +15,7 @@ This is useful for:
 - when you want people to record themselves playing your game, but without the hassle of setting up OBS
 - when you want randos to be able to easily comment on their mic as they play the game
 - checking if your update fixed that puzzle everyone had trouble with
-- 
+
 
 ## Installation
 This guide expects you to have a basic understanding of web stuff. If you don't, please send me a message and I'll help you set it up.
