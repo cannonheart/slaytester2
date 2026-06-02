@@ -63,14 +63,14 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
               return;
             }
             showMicConsentPopup(config, () => {
-              navigator.mediaDevices.getUserMedia({ audio: true })
+              navigator.mediaDevices.getUserMedia({ audio: { autoGainControl: false, echoCancellation: false, noiseSuppression: false } })
                 .then((stream) => {
                   showMicCheckPopup(config, stream, (micStream) => {
                     startRecording(config, sessionId, micStream);
                   }, () => {
                     stream.getTracks().forEach((t) => t.stop());
                     showMicConsentPopup(config, () => {
-                      navigator.mediaDevices.getUserMedia({ audio: true })
+                      navigator.mediaDevices.getUserMedia({ audio: { autoGainControl: false, echoCancellation: false, noiseSuppression: false } })
                         .then((s) => showMicCheckPopup(config, s,
                           (ms) => startRecording(config, sessionId, ms),
                           () => { s.getTracks().forEach((t) => t.stop()); },
@@ -187,15 +187,22 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
     (window as any).__slaytesterCaptureDest = captureDest;
     console.log("[Slaytester] capture destination created");
 
+    const finalGain = audioCtx.createGain();
+    finalGain.gain.value = 1.0;
+    finalGain.connect(captureDest);
+
     const filler = audioCtx.createConstantSource();
     filler.offset.value = 0;
-    filler.connect(captureDest);
+    filler.connect(finalGain);
     filler.start();
 
     function bridgeGameStream(gs: MediaStream) {
       try {
         const bridge = audioCtx.createMediaStreamSource(gs);
-        bridge.connect(captureDest);
+        const gameGain = audioCtx.createGain();
+        gameGain.gain.value = 0.38;
+        bridge.connect(gameGain);
+        gameGain.connect(finalGain);
         console.log("[Slaytester] bridged game audio to recorder");
       } catch (err) {
         console.error("[Slaytester] failed to bridge game audio:", err);
@@ -220,9 +227,16 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
       const micTracks = micStream.getAudioTracks();
       console.log("[Slaytester] connecting mic:", micTracks.length, "track(s)");
       const micSource = audioCtx.createMediaStreamSource(micStream);
+      const compressor = audioCtx.createDynamicsCompressor();
+      compressor.threshold.value = -25;
+      compressor.ratio.value = 15;
+      compressor.attack.value = 0.005;
+      compressor.release.value = 0.15;
       const micGain = audioCtx.createGain();
-      micSource.connect(micGain);
-      micGain.connect(captureDest);
+      micGain.gain.value = 1.3;
+      micSource.connect(compressor);
+      compressor.connect(micGain);
+      micGain.connect(finalGain);
     } else {
       console.log("[Slaytester] no mic stream, recording without microphone");
     }
