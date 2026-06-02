@@ -187,6 +187,29 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
     (window as any).__slaytesterCaptureDest = captureDest;
     console.log("[Slaytester] capture destination created");
 
+    function showRecordingIndicator() {
+      if (document.getElementById("st-rec-indicator")) return;
+      if (!document.getElementById("st-rec-style")) {
+        const style = document.createElement("style");
+        style.id = "st-rec-style";
+        style.textContent = `@keyframes st-rec-pulse{0%,100%{opacity:1}50%{opacity:0.3}}`;
+        document.head.appendChild(style);
+      }
+      const el = document.createElement("div");
+      el.id = "st-rec-indicator";
+      Object.assign(el.style, {
+        position: "fixed", top: "12px", right: "12px",
+        background: "rgba(0,0,0,0.65)", color: "#fff",
+        fontFamily: "sans-serif", fontSize: "13px",
+        padding: "6px 14px", borderRadius: "20px",
+        zIndex: "999999", display: "flex",
+        alignItems: "center", gap: "6px",
+        pointerEvents: "none",
+      });
+      el.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff4444;animation:st-rec-pulse 1.5s infinite"></span> REC';
+      document.body.appendChild(el);
+    }
+
     const finalGain = audioCtx.createGain();
     finalGain.gain.value = 1.0;
     finalGain.connect(captureDest);
@@ -256,6 +279,8 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
       config as { bitrate: number },
       combinedStream,
     );
+
+    showRecordingIndicator();
 
     addEventListener("beforeunload", () => {
       if (handle) handle.stop();
