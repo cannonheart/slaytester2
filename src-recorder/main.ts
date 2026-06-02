@@ -189,17 +189,13 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
       const ctx2d = capture.getContext("2d")!;
       ctx2d.imageSmoothingEnabled = false;
 
-      // Watch for CSS size changes
+      // Log size changes but don't resize — captureStream is locked to initial size
       const resizeObserver = new ResizeObserver(() => {
         const rect = gameCanvas!.getBoundingClientRect();
         const newW = Math.round(rect.width) || gameCanvas!.width;
         const newH = Math.round(rect.height) || gameCanvas!.height;
         if (newW !== recordW || newH !== recordH) {
-          console.log("[Slaytester] Canvas size changed:", recordW, "x", recordH, "→", newW, "x", newH);
-          recordW = newW;
-          recordH = newH;
-          capture.width = recordW;
-          capture.height = recordH;
+          console.log("[Slaytester] Canvas size changed:", recordW, "x", recordH, "→", newW, "x", newH, "(recording continues at", recordW, "x", recordH, ")");
         }
       });
       resizeObserver.observe(gameCanvas);
