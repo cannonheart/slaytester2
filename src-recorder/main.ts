@@ -163,11 +163,23 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
     filler.connect(captureDest);
     filler.start();
 
-    const gameStream = retroactivelyCapture(captureDest);
-    if (gameStream) {
-      const bridge = audioCtx.createMediaStreamSource(gameStream);
+    function bridgeGameStream(gs: MediaStream) {
+      const bridge = audioCtx.createMediaStreamSource(gs);
       bridge.connect(captureDest);
       console.log("[Slaytester] bridged game audio to recorder");
+    }
+
+    const initialStream = retroactivelyCapture(captureDest);
+    if (initialStream) {
+      bridgeGameStream(initialStream);
+    } else {
+      const pollTimer = setInterval(() => {
+        const gs = retroactivelyCapture(captureDest);
+        if (gs) {
+          clearInterval(pollTimer);
+          bridgeGameStream(gs);
+        }
+      }, 1000);
     }
 
     if (micStream) {

@@ -1,6 +1,7 @@
 type Connection = { source: AudioNode; output: number; input: number };
 
 const tracked = new WeakSet<AudioContext>();
+const tapped = new WeakSet<AudioContext>();
 const pending: Connection[] = [];
 let origConnect: Function;
 
@@ -21,6 +22,7 @@ const OVERRIDES: (keyof AudioContext)[] = [
   "createGain",
   "createBufferSource",
   "createOscillator",
+  "createScriptProcessor",
   "createMediaElementSource",
   "createMediaStreamSource",
 ];
@@ -68,13 +70,13 @@ export function retroactivelyCapture(cd: AudioNode): MediaStream | null {
   const byCtx = new Map<AudioContext, Connection[]>();
   for (const conn of pending) {
     const ctx = conn.source.context as AudioContext;
-    if (!ctx) continue;
+    if (!ctx || tapped.has(ctx)) continue;
     if (!byCtx.has(ctx)) byCtx.set(ctx, []);
     byCtx.get(ctx)!.push(conn);
   }
-  pending.length = 0;
 
   for (const [ctx, conns] of byCtx) {
+    tapped.add(ctx);
     const realDest = ctx.destination;
     const tap = ctx.createGain();
     const gameDest = ctx.createMediaStreamDestination();
