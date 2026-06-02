@@ -6,7 +6,7 @@ let _recordingsDir: string | null = null;
 
 function getRecordingsDir(): string {
   if (!_recordingsDir) {
-    _recordingsDir = new URL("../../data/recordings", import.meta.url).pathname;
+    _recordingsDir = new URL("../../../data/recordings", import.meta.url).pathname;
   }
   return _recordingsDir;
 }
