@@ -17,10 +17,12 @@ const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+const PUBLIC_API_PREFIXES = ["/api/recorder/", "/api/health"];
+
 export async function handler(ctx: FreshContext) {
   const req = ctx.req;
 
-  if (req.method === "OPTIONS") {
+  if (req.method === "OPTIONS" && PUBLIC_API_PREFIXES.some((p) => ctx.url.pathname.startsWith(p))) {
     return new Response(null, { headers: CORS_HEADERS });
   }
 
@@ -40,7 +42,7 @@ export async function handler(ctx: FreshContext) {
 
   const resp = await ctx.next();
 
-  if (ctx.url.pathname.startsWith("/api/")) {
+  if (PUBLIC_API_PREFIXES.some((p) => ctx.url.pathname.startsWith(p))) {
     const headers = new Headers(resp.headers);
     for (const [k, v] of Object.entries(CORS_HEADERS)) {
       headers.set(k, v);
