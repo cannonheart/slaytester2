@@ -11,6 +11,12 @@ function track(ctx: AudioContext): void {
   }
 }
 
+function sameCtx(node: AudioNode, target: AudioNode): boolean {
+  try { node.context; } catch { return false; }
+  try { target.context; } catch { return false; }
+  return node.context === target.context;
+}
+
 const OVERRIDES: (keyof AudioContext)[] = [
   "createGain",
   "createBufferSource",
@@ -50,7 +56,7 @@ export function installAudioProxy(): void {
       if (!cd || target !== cd) {
         pending.push({ source: this, output: outIdx, input: inIdx });
       }
-      if (cd && target !== cd) {
+      if (cd && target !== cd && sameCtx(this, cd)) {
         origConnect.call(this, cd, output, input);
       }
     }
