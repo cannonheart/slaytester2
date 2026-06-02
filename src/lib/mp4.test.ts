@@ -1,5 +1,5 @@
 import { assertEquals } from "$std/assert/mod.ts";
-import { findBox, readDuration, stripInitSegment, updateMoovDuration, mergeToStream, parseMfra, computeTotalDuration, readTfdt } from "./mp4.ts";
+import { findBox, readDuration, stripInitSegment, updateMoovDuration, mergeToStream, parseMfra, computeTotalDuration, readTfdt, computeDurationFromChunks, readVideoTimescale } from "./mp4.ts";
 
 const FIXTURE = Deno.readFileSync(new URL("../testdata/chunk.mp4", import.meta.url));
 
@@ -97,6 +97,12 @@ Deno.test("mp4: computeTotalDuration uses last chunk's tfdt", () => {
 
 Deno.test("mp4: computeTotalDuration returns 0 for single chunk", () => {
   assertEquals(computeTotalDuration([FIXTURE]), 0);
+});
+
+Deno.test("mp4: computeDurationFromChunks returns seconds", () => {
+  const stripped = stripInitSegment(FIXTURE);
+  // Both have tfdt=0, so duration should be 0
+  assertEquals(computeDurationFromChunks(FIXTURE, stripped), 0);
 });
 
 Deno.test("mp4: parseMfra reads fixture correctly", () => {

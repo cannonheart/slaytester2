@@ -108,6 +108,14 @@ export function computeTotalDuration(chunks: Uint8Array[]): number {
   return readTfdt(chunks[chunks.length - 1]);
 }
 
+export function computeDurationFromChunks(firstChunk: Uint8Array, lastChunk: Uint8Array): number {
+  const tfdt = readTfdt(lastChunk);
+  if (tfdt <= 0) return 0;
+  const ts = readVideoTimescale(firstChunk);
+  if (ts <= 0) return 0;
+  return tfdt / ts;
+}
+
 export function updateMoovDuration(buf: Uint8Array, duration: number): void {
   const moovOff = findBox(buf, "moov");
   if (moovOff === -1) return;
