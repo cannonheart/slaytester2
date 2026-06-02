@@ -19,7 +19,9 @@ export function startCapture(
   config: { bitrate: number },
   stream: MediaStream,
 ): { stop: () => void } {
-  const mime = "video/mp4";
+  const mime = MediaRecorder.isTypeSupported("video/mp4;codecs=avc3")
+    ? "video/mp4;codecs=avc3"
+    : "video/mp4";
   console.log("[Slaytester] MediaRecorder mime:", mime);
 
   if (!MediaRecorder.isTypeSupported(mime)) {
