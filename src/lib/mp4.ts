@@ -276,14 +276,15 @@ export function buildMfra(tracks: TrackEntry[], totalSize: number, cumSizes: num
 }
 
 function setU64(buf: Uint8Array, off: number, val: number): void {
-  buf[off] = (val >> 56) & 0xff;
-  buf[off + 1] = (val >> 48) & 0xff;
-  buf[off + 2] = (val >> 40) & 0xff;
-  buf[off + 3] = (val >> 32) & 0xff;
-  buf[off + 4] = (val >> 24) & 0xff;
-  buf[off + 5] = (val >> 16) & 0xff;
-  buf[off + 6] = (val >> 8) & 0xff;
-  buf[off + 7] = val & 0xff;
+  const b = BigInt(val);
+  buf[off] = Number((b >> 56n) & 0xffn);
+  buf[off + 1] = Number((b >> 48n) & 0xffn);
+  buf[off + 2] = Number((b >> 40n) & 0xffn);
+  buf[off + 3] = Number((b >> 32n) & 0xffn);
+  buf[off + 4] = Number((b >> 24n) & 0xffn);
+  buf[off + 5] = Number((b >> 16n) & 0xffn);
+  buf[off + 6] = Number((b >> 8n) & 0xffn);
+  buf[off + 7] = Number(b & 0xffn);
 }
 
 function buildTfra(track: TrackEntry, cumSizes: number[]): Uint8Array {
