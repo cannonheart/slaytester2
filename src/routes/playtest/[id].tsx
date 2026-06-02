@@ -26,7 +26,7 @@ function Page({ pt, sessions, base }: { pt: any; sessions: any[]; base: string }
             <div class="flex-1">
               <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
               <input
-                type="text" name="name"
+                type="text" name="name" maxLength={200}
                 value={pt.name}
                 class="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-500 w-full"
               />
@@ -151,7 +151,10 @@ export const handler = {
 
     const update: Record<string, any> = {};
     const name = form.get("name");
-    if (name !== null && typeof name === "string" && name.trim()) update.name = name.trim();
+    if (name !== null && typeof name === "string" && name.trim()) {
+      if (name.trim().length > 200) update.name = name.trim().slice(0, 200);
+      else update.name = name.trim();
+    }
 
     const slots = form.get("availableSlots");
     if (slots !== null) update.availableSlots = Number(slots);

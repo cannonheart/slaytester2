@@ -16,6 +16,9 @@ export const handler = {
     if (!name || availableSlots == null) {
       return Response.json({ error: "name and availableSlots are required" }, { status: 400 });
     }
+    if (typeof name === "string" && name.length > 200) {
+      return Response.json({ error: "name must be under 200 characters" }, { status: 400 });
+    }
 
     const db = await getDb();
     const id = crypto.randomUUID();

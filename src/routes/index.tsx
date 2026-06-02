@@ -25,7 +25,7 @@ function Page({ list, error }: { list: any[]; error?: string }) {
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
               <input
-                type="text" name="name" placeholder="Playtest name" required
+                type="text" name="name" placeholder="Playtest name" required maxLength={200}
                 class="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-500"
               />
             </div>

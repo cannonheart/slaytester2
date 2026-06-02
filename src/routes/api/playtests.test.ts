@@ -79,6 +79,19 @@ Deno.test("Playtests API: lists playtests", async () => {
   assertEquals(body[1].name, "First");
 });
 
+Deno.test("Playtests API: returns 400 when name exceeds 200 characters", async () => {
+  resetDb(DB);
+  await push(resetDb(DB));
+
+  const req = new Request("http://test/api/playtests", {
+    method: "POST",
+    body: JSON.stringify({ name: "x".repeat(201), availableSlots: 5 }),
+    headers: { "content-type": "application/json" },
+  });
+  const resp = await handler.POST(mockCtx(req));
+  assertEquals(resp.status, 400);
+});
+
 Deno.test("Playtests API: rejects unauthorized requests", async () => {
   const req = new Request("http://test/api/playtests");
   const resp = await middleware(mockMiddlewareCtx(req));
