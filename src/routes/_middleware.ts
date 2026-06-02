@@ -1,5 +1,5 @@
 import { FreshContext } from "fresh";
-import { isAuthorized } from "../lib/auth.ts";
+import { isAuthorized, getClientIp, checkAuthRateLimit, recordFailedAuth } from "../lib/auth.ts";
 
 const PUBLIC_PATHS = new Set(["/login"]);
 
@@ -26,6 +26,11 @@ export async function handler(ctx: FreshContext) {
 
   if (!isPublic(ctx.url.pathname)) {
     if (!isAuthorized(req)) {
+      const ip = getClientIp(req);
+      if (!checkAuthRateLimit(ip)) {
+        return new Response(null, { status: 429, statusText: "Too Many Requests" });
+      }
+      recordFailedAuth(ip);
       return new Response(null, {
         status: 303,
         headers: { Location: "/login" },

@@ -29,3 +29,40 @@ export function isAuthorized(req: Request): boolean {
 
   return false;
 }
+
+export function getClientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for") ?? "unknown";
+}
+
+const failedAuth = new Map<string, { count: number; time: number }>();
+
+export function resetAuthRateLimits() {
+  failedAuth.clear();
+}
+
+export function checkAuthRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = failedAuth.get(ip);
+
+  if (entry && now - entry.time > 300_000) {
+    failedAuth.delete(ip);
+    return true;
+  }
+
+  if (entry && entry.count >= 5) {
+    const excess = entry.count - 5;
+    const wait = Math.min(Math.pow(2, excess), 60) * 1000;
+    if (now - entry.time < wait) return false;
+  }
+
+  return true;
+}
+
+export function recordFailedAuth(ip: string): void {
+  const entry = failedAuth.get(ip) ?? { count: 0, time: Date.now() };
+  entry.count++;
+  entry.time = Date.now();
+  failedAuth.set(ip, entry);
+}
+
+

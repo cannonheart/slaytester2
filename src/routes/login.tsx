@@ -1,4 +1,4 @@
-import { checkToken } from "../lib/auth.ts";
+import { checkToken, getClientIp, checkAuthRateLimit, recordFailedAuth } from "../lib/auth.ts";
 import { PageLayout } from "../components/PageLayout.tsx";
 import { Card } from "../components/Card.tsx";
 import { Heading } from "../components/Heading.tsx";
@@ -30,11 +30,15 @@ export const handler = {
   async POST(ctx: any) {
     const form = await ctx.req.formData();
     const token = form.get("token") as string | null;
+
     if (!token || !checkToken(token)) {
-      if (!token || token === "") {
-        return new Response(null, { status: 400 });
-      }
-      return ctx.render(<LoginPage error="Invalid token" />);
+      if (token === "") return new Response(null, { status: 400 });
+
+      const ip = getClientIp(ctx.req);
+      if (!checkAuthRateLimit(ip)) return new Response(null, { status: 429 });
+      recordFailedAuth(ip);
+
+      return new Response(null, { status: 200 });
     }
 
     return new Response(null, {
