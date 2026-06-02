@@ -1,6 +1,13 @@
 import { getDb } from "../../db/db.ts";
 import { playtests, sessions } from "../../db/schema.ts";
 import { eq } from "drizzle-orm";
+import { computeDurationFromChunks } from "../../lib/mp4.ts";
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-US", {
@@ -8,7 +15,7 @@ function formatDate(ts: number): string {
   });
 }
 
-function page(session: any, playtestName: string) {
+function page(session: any, playtestName: string, duration: number) {
   return (
     <div class="min-h-screen bg-gray-50">
       <div class="max-w-4xl mx-auto p-8">
@@ -19,7 +26,7 @@ function page(session: any, playtestName: string) {
         <h1 class="text-4xl font-bold mb-2">{playtestName}</h1>
         <p class="text-sm text-gray-500 mb-8">
           Session {session.id.slice(0, 8)} &middot;{" "}
-          {session.chunkCount} chunks &middot;{" "}
+          {formatDuration(duration)} &middot;{" "}
           {formatDate(session.createdAt)}
         </p>
 
@@ -48,6 +55,8 @@ function notFound() {
   );
 }
 
+const RECORDINGS_DIR = new URL("../../../data/recordings", import.meta.url).pathname;
+
 export const handler = {
   async GET(ctx: any) {
     const { id } = ctx.params;
@@ -58,6 +67,24 @@ export const handler = {
     const pt = await db.select().from(playtests).where(eq(playtests.id, session.playtestId)).get();
     const name = pt?.name ?? "Unknown Playtest";
 
-    return ctx.render(page(session, name));
+    // Compute duration from the first and last chunk
+    let duration = 0;
+    try {
+      const dir = `${RECORDINGS_DIR}/${id}`;
+      const files: string[] = [];
+      for await (const e of Deno.readDir(dir)) {
+        if (e.isFile && e.name.endsWith(".mp4")) files.push(e.name);
+      }
+      if (files.length >= 2) {
+        files.sort((a, b) => parseInt(a) - parseInt(b));
+        const first = await Deno.readFile(`${dir}/${files[0]}`);
+        const last = await Deno.readFile(`${dir}/${files[files.length - 1]}`);
+        duration = computeDurationFromChunks(first, last);
+      }
+    } catch {
+      // No chunks found — duration stays 0
+    }
+
+    return ctx.render(page(session, name, duration));
   },
 };

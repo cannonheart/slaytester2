@@ -2,6 +2,15 @@ import { getDb } from "../../db/db.ts";
 import { playtests as ptTable, sessions as sTable } from "../../db/schema.ts";
 import { eq, desc } from "drizzle-orm";
 import { Checkbox } from "../../components/Checkbox.tsx";
+import { computeDurationFromChunks } from "../../lib/mp4.ts";
+
+const RECORDINGS_DIR = new URL("../../../data/recordings", import.meta.url).pathname;
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 function Page({ pt, sessions, base }: { pt: any; sessions: any[]; base: string }) {
   return (
@@ -57,7 +66,7 @@ function Page({ pt, sessions, base }: { pt: any; sessions: any[]; base: string }
               <table class="w-full">
                 <thead>
                   <tr class="border-b">
-                    <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Chunks</th>
+                    <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Duration</th>
                     <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Created</th>
                     <th class="px-6 py-3"></th>
                   </tr>
@@ -65,7 +74,7 @@ function Page({ pt, sessions, base }: { pt: any; sessions: any[]; base: string }
                 <tbody>
                   {sessions.map((s) => (
                     <tr class="border-b last:border-b-0">
-                      <td class="px-6 py-4 text-sm text-gray-500">{s.chunkCount ?? 0}</td>
+                      <td class="px-6 py-4 text-sm text-gray-500">{formatDuration(s.duration)}</td>
                       <td class="px-6 py-4 text-sm text-gray-500">
                         {new Date(s.createdAt).toLocaleDateString("en-US", {
                           year: "numeric", month: "short", day: "numeric",
@@ -111,6 +120,24 @@ export const handler = {
       .where(eq(sTable.playtestId, id))
       .orderBy(desc(sTable.createdAt))
       .all();
+
+    // Compute duration for each session from chunk files
+    for (const s of sessionList) {
+      s.duration = 0;
+      try {
+        const dir = `${RECORDINGS_DIR}/${s.id}`;
+        const files: string[] = [];
+        for await (const e of Deno.readDir(dir)) {
+          if (e.isFile && e.name.endsWith(".mp4")) files.push(e.name);
+        }
+        if (files.length >= 2) {
+          files.sort((a, b) => parseInt(a) - parseInt(b));
+          const first = Deno.readFileSync(`${dir}/${files[0]}`);
+          const last = Deno.readFileSync(`${dir}/${files[files.length - 1]}`);
+          s.duration = computeDurationFromChunks(first, last);
+        }
+      } catch {}
+    }
 
     return ctx.render(
       <Page pt={pt} sessions={sessionList} base={base} />,
