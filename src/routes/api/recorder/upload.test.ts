@@ -125,6 +125,69 @@ Deno.test("Recorder upload: rejects oversized chunk", async () => {
   assertEquals(resp.status, 413);
 });
 
+Deno.test("Recorder upload: rejects chunks beyond time limit", async () => {
+  setRecordingsDir(TMP);
+  resetDb(":memory:");
+  const db = resetDb(":memory:");
+  await push(db);
+  await db.insert(playtests).values({
+    id: "pt-1",
+    name: "Test",
+    availableSlots: 5,
+    requestMic: 1,
+    createdAt: Date.now(),
+  }).run();
+  await db.insert(sessions).values({
+    id: "s-1",
+    playtestId: "pt-1",
+    createdAt: Date.now() - 61 * 60 * 1000, // 61 minutes ago
+  }).run();
+
+  const form = new FormData();
+  form.set("sessionId", "s-1");
+  form.set("chunkIndex", "0");
+  form.set("blob", new Blob(["x"]));
+
+  const req = new Request("http://test/api/recorder/upload", {
+    method: "POST",
+    body: form,
+  });
+  const resp = await handler.POST(mockCtx(req));
+  assertEquals(resp.status, 403);
+});
+
+Deno.test("Recorder upload: rejects chunks beyond chunk limit", async () => {
+  setRecordingsDir(TMP);
+  resetDb(":memory:");
+  const db = resetDb(":memory:");
+  await push(db);
+  await db.insert(playtests).values({
+    id: "pt-1",
+    name: "Test",
+    availableSlots: 5,
+    requestMic: 1,
+    createdAt: Date.now(),
+  }).run();
+  await db.insert(sessions).values({
+    id: "s-1",
+    playtestId: "pt-1",
+    createdAt: Date.now(),
+    chunkCount: 900,
+  }).run();
+
+  const form = new FormData();
+  form.set("sessionId", "s-1");
+  form.set("chunkIndex", "0");
+  form.set("blob", new Blob(["x"]));
+
+  const req = new Request("http://test/api/recorder/upload", {
+    method: "POST",
+    body: form,
+  });
+  const resp = await handler.POST(mockCtx(req));
+  assertEquals(resp.status, 403);
+});
+
 Deno.test("Recorder upload: rejects invalid sessionId characters", async () => {
   const form = new FormData();
   form.set("sessionId", "../evil");

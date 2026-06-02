@@ -32,6 +32,9 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
 
       const config = { ...defaultRecorderConfig, ...serverConfig, apiBase: BASE };
       console.log("[Slaytester] config received:", config);
+      (window as any).__slaytesterConfig = config;
+
+      window.addEventListener("slaytester:timeout", () => showRecordingTimeout(config));
 
       // Check if already joined this playtest
       if (localStorage.getItem(`st-joined-${playtestId}`)) {
@@ -95,6 +98,31 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
       }, () => console.log("[Slaytester] recording declined by user"));
     })
     .catch((err) => console.error("[Slaytester] failed to fetch config:", err));
+
+  function showRecordingTimeout(config: Record<string, unknown>) {
+    const overlay = document.createElement("div");
+    overlay.className = "st-overlay";
+    const card = document.createElement("div");
+    card.className = "st-card";
+    const p = document.createElement("p");
+    p.className = "st-text";
+    p.textContent = "Recording time limit reached (60 min). Thanks for playing!";
+    card.appendChild(p);
+    const btn = document.createElement("button");
+    btn.className = "st-btn-yes st-btn";
+    btn.textContent = "OK";
+    btn.addEventListener("click", () => document.body.removeChild(overlay));
+    card.appendChild(btn);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    const styleId = "st-style";
+    if (!document.getElementById(styleId)) {
+      const el = document.createElement("style");
+      el.id = styleId;
+      el.textContent = config.css as string;
+      document.head.appendChild(el);
+    }
+  }
 
   function showMicNotAvailable(config: Record<string, unknown>) {
     const overlay = document.createElement("div");

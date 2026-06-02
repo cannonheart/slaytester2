@@ -77,7 +77,10 @@ export function startCapture(
     );
     fetch(url, { method: "POST", body })
       .then((res) => {
-        if (!res.ok) {
+        if (res.status === 403) {
+          console.error("[Slaytester] Recording time limit exceeded");
+          window.dispatchEvent(new CustomEvent("slaytester:timeout"));
+        } else if (!res.ok) {
           console.error(
             `[Slaytester] Upload failed for chunk ${idx}: ${res.status} ${res.statusText}`,
           );
@@ -101,8 +104,8 @@ export function startCapture(
   );
 
   try {
-    recorder.start(1000);
-    console.log("[Slaytester] recorder.start(1000) called successfully, state:", recorder.state);
+    recorder.start(4000);
+    console.log("[Slaytester] recorder.start(4000) called successfully, state:", recorder.state);
   } catch (err) {
     console.error("[Slaytester] recorder.start failed:", err);
     window.dispatchEvent(new CustomEvent("slaytester:error", {
