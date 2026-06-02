@@ -11,6 +11,12 @@ let _pushed = false;
 
 export async function getDb(): Promise<LibSQLDatabase> {
   if (!_db) {
+    const dir = new URL("../../data", import.meta.url).pathname;
+    try {
+      await Deno.mkdir(dir, { recursive: true });
+    } catch (e) {
+      throw new Error(`[Slaytester] Failed to create data directory at ${dir}: ${e}`);
+    }
     _client = createClient({ url: `file:${DB_URL}` });
     _db = drizzle(_client);
   }
