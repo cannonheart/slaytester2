@@ -20,12 +20,17 @@ export const handler = {
       return Response.json({ error: "name must be under 200 characters" }, { status: 400 });
     }
 
+    const slotNum = Number(availableSlots);
+    if (!Number.isInteger(slotNum) || slotNum < 0) {
+      return Response.json({ error: "availableSlots must be a non-negative integer" }, { status: 400 });
+    }
+
     const db = await getDb();
     const id = crypto.randomUUID();
     await db.insert(playtests).values({
       id,
       name,
-      availableSlots: Number(availableSlots),
+      availableSlots: slotNum,
       requestMic: requestMic != null ? (requestMic ? 1 : 0) : 1,
       createdAt: Date.now(),
     }).run();

@@ -15,7 +15,13 @@ export const handler = {
     }
 
     const update: Record<string, any> = {};
-    if (availableSlots != null) update.availableSlots = Number(availableSlots);
+    if (availableSlots != null) {
+      const slotNum = Number(availableSlots);
+      if (!Number.isInteger(slotNum) || slotNum < 0) {
+        return Response.json({ error: "availableSlots must be a non-negative integer" }, { status: 400 });
+      }
+      update.availableSlots = slotNum;
+    }
     if (requestMic != null) update.requestMic = requestMic ? 1 : 0;
 
     if (Object.keys(update).length > 0) {

@@ -91,11 +91,18 @@ export const handler = {
       return ctx.render(<Page list={list} error="Name and player count are required" />);
     }
 
+    const slotNum = Number(availableSlots);
+    if (!Number.isInteger(slotNum) || slotNum < 0) {
+      const db = await getDb();
+      const list = await db.select().from(playtests).orderBy(desc(playtests.createdAt)).all();
+      return ctx.render(<Page list={list} error="Player count must be a positive number" />);
+    }
+
     const db = await getDb();
     await db.insert(playtests).values({
       id: crypto.randomUUID(),
       name,
-      availableSlots: Number(availableSlots),
+      availableSlots: slotNum,
       requestMic: 1,
       createdAt: Date.now(),
     }).run();

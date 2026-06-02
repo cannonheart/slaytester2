@@ -157,7 +157,14 @@ export const handler = {
     }
 
     const slots = form.get("availableSlots");
-    if (slots !== null) update.availableSlots = Number(slots);
+    if (slots !== null) {
+      const slotNum = Number(slots);
+      if (!Number.isInteger(slotNum) || slotNum < 0) {
+        // Silently ignore invalid value — form submits whatever is in the input
+      } else {
+        update.availableSlots = slotNum;
+      }
+    }
 
     update.requestMic = form.get("requestMic") === "on" ? 1 : 0;
 
