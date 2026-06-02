@@ -6,7 +6,6 @@
             src="http://localhost:8000/recorder.js"
             data-playtest-id="861f20cc-9858-47a9-928e-e1d9269c596d"
         ></script>
-
         <script type="text/javascript">
             // Default shell for PICO-8 0.2.6 (includes @weeble's gamepad mod 1.0)
 
@@ -447,8 +446,8 @@
 
                 if (!is_fullscreen)
                     if (!p8_touch_detected)
+                        // fullscreen: update every frame for safety. should be cheap!
                         if (p8_update_layout_hash == update_hash) {
-                            // fullscreen: update every frame for safety. should be cheap!
                             // mobile: update every frame because nothing can be trusted
                             //console.log("p8_update_layout(): skipping");
                             requestAnimationFrame(p8_update_layout);
