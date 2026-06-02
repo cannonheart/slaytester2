@@ -68,12 +68,14 @@ export const handler = {
       tmpFile.close();
 
       const stat = await Deno.stat(tmpPath);
-      const body = await Deno.open(tmpPath);
+      const file = await Deno.open(tmpPath);
 
-      // Schedule cleanup — file won't actually disappear until the readable fd closes
+      // Remove before returning — the open fd keeps the inode alive until
+      // the response stream is consumed. If the client disconnects, the
+      // fd closes and the temp file is cleaned up by the OS.
       Deno.remove(tmpPath);
 
-      return new Response(body.readable, {
+      return new Response(file.readable, {
         headers: {
           "Content-Type": "video/mp4",
           "Content-Length": String(stat.size),
