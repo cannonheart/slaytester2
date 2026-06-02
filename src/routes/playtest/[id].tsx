@@ -128,8 +128,7 @@ export const handler = {
     const slots = form.get("availableSlots");
     if (slots !== null) update.availableSlots = Number(slots);
 
-    const mic = form.get("requestMic");
-    if (mic !== null) update.requestMic = mic === "on" ? 1 : 0;
+    update.requestMic = form.get("requestMic") === "on" ? 1 : 0;
 
     if (Object.keys(update).length > 0) {
       await db.update(ptTable).set(update).where(eq(ptTable.id, id)).run();

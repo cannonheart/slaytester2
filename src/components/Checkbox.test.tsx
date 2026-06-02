@@ -10,12 +10,6 @@ Deno.test("Checkbox renders with label and styled classes", () => {
   assertStringIncludes(html, "appearance-none");
 });
 
-Deno.test("Checkbox renders hidden input for unchecked value", () => {
-  const html = render(<Checkbox name="foo" checked={false} />);
-  assertStringIncludes(html, "type=\"hidden\"");
-  assertStringIncludes(html, "value=\"off\"");
-});
-
 Deno.test("Checkbox renders unchecked state", () => {
   const html = render(<Checkbox name="bar" checked={false} />);
   // Preact omits the checked attribute when false via JSX
