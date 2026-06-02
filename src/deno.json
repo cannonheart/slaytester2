@@ -5,7 +5,8 @@
     "start": "deno run -A --watch=static/,routes/ dev.ts",
     "build": "deno run -A dev.ts build",
     "build:recorder": "deno run -A ../src-recorder/build.ts",
-    "preview": "deno serve -A _fresh/server.js",
+    "production": "deno task build && deno task preview",
+    "preview": "deno serve -A _fresh/server.js --port 5147",
     "update": "deno run -A -r jsr:@fresh/update ."
   },
   "lint": { "rules": { "tags": ["fresh", "recommended"] } },
