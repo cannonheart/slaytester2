@@ -139,24 +139,85 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
     sessionId: string,
     micStream: MediaStream | null,
   ) {
-    const canvas = document.querySelector("canvas");
-    if (!canvas) {
-      console.error("[Slaytester] no canvas element found on page");
-      return;
+    function logCanvasInfo(): void {
+      const all = document.querySelectorAll("canvas");
+      console.log(`[Slaytester] Found ${all.length} canvas(es):`);
+      all.forEach((c, i) => {
+        const r = c.getBoundingClientRect();
+        console.log(`  [${i}] id="${c.id}" class="${c.className}" internal=${c.width}x${c.height} css=${Math.round(r.width)}x${Math.round(r.height)} visible=${r.width > 0 && r.height > 0}`);
+      });
     }
 
     const fps = (config.fps as number) ?? 30;
     console.log("[Slaytester] capturing canvas at", fps, "fps");
 
+    // Wait for a game canvas with reasonable dimensions
+    logCanvasInfo();
+    let gameCanvas: HTMLCanvasElement | null = null;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      for (const c of document.querySelectorAll("canvas")) {
+        const cr = c.getBoundingClientRect();
+        if (c.width > 0 && c.height > 0 && cr.width > 0 && cr.height > 0) {
+          gameCanvas = c;
+          break;
+        }
+      }
+      if (gameCanvas) break;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    if (!gameCanvas) {
+      console.error("[Slaytester] No suitable canvas found after 20s");
+      logCanvasInfo();
+      return;
+    }
+    console.log("[Slaytester] Selected canvas:", gameCanvas.id || "(no id)", gameCanvas.width, "x", gameCanvas.height);
+
+    let recordW = Math.round(gameCanvas.getBoundingClientRect().width) || gameCanvas.width;
+    let recordH = Math.round(gameCanvas.getBoundingClientRect().height) || gameCanvas.height;
+    console.log("[Slaytester] recording at:", recordW, "x", recordH);
+
     let canvasStream: MediaStream;
     try {
-      const ctx = (canvas as HTMLCanvasElement).getContext("2d");
-      if (ctx) {
-        ctx.globalAlpha = 0.01;
-        ctx.fillRect(0, 0, 1, 1);
-        ctx.globalAlpha = 1;
-      }
-      canvasStream = (canvas as HTMLCanvasElement).captureStream(fps);
+      const capture = document.createElement("canvas");
+      capture.width = recordW;
+      capture.height = recordH;
+      capture.style.position = "fixed";
+      capture.style.left = "-9999px";
+      capture.style.top = "0";
+      document.body.appendChild(capture);
+
+      const ctx2d = capture.getContext("2d")!;
+      ctx2d.imageSmoothingEnabled = false;
+
+      // Watch for CSS size changes
+      const resizeObserver = new ResizeObserver(() => {
+        const rect = gameCanvas!.getBoundingClientRect();
+        const newW = Math.round(rect.width) || gameCanvas!.width;
+        const newH = Math.round(rect.height) || gameCanvas!.height;
+        if (newW !== recordW || newH !== recordH) {
+          console.log("[Slaytester] Canvas size changed:", recordW, "x", recordH, "→", newW, "x", newH);
+          recordW = newW;
+          recordH = newH;
+          capture.width = recordW;
+          capture.height = recordH;
+        }
+      });
+      resizeObserver.observe(gameCanvas);
+
+      // Draw first frame synchronously so captureStream has content
+      ctx2d.drawImage(gameCanvas, 0, 0, recordW, recordH);
+
+      // Continue drawing each frame
+      let frame = 0;
+      (function copy() {
+        ctx2d.drawImage(gameCanvas!, 0, 0, recordW, recordH);
+        ctx2d.fillStyle = frame % 2 === 0 ? "#000" : "#fff";
+        ctx2d.fillRect(0, 0, 2, 2);
+        frame++;
+        requestAnimationFrame(copy);
+      })();
+
+      canvasStream = capture.captureStream(fps);
     } catch (err) {
       console.error("[Slaytester] canvas.captureStream failed:", err);
       return;
