@@ -27,11 +27,8 @@ Browser (player)                 Slaytester 2 Server
 │ Canvas capture ─────┤   ──►    │ /api/recorder/finalize     │
 │ Audio proxy ────────┤          │                            │
 │ MediaRecorder ──────┤          │ /api/stream  (auth)        │
-│ Chunks via POST ────┤          │ /api/playtests  (auth)     │
-└─────────────────────┘          │ /api/playtests/:id  (auth) │
-                                 │ /api/sessions  (auth)      │
-                                 │                            │
-                                 │ / (dashboard)  [auth]      │
+│ Chunks via POST ────┤          │                            │
+└─────────────────────┘          │ / (dashboard)  [auth]      │
                                  │ /playtest/:id  [auth]      │
                                  │ /session/:id   [auth]      │
                                  │ /login         [no auth]   │
@@ -135,24 +132,19 @@ await db.transaction(async (tx) => {
 ## API Endpoints
 
 | Method | Path | Auth | Description |
-|---|---|---|---|
+|---|---|---|---|---|
 | `GET` | `/recorder.js` | No | Serve bundled recorder script |
-| `GET` | `/api/recorder/config` | No | Returns `{ availableSlots, requestMic }` or `{ availableSlots: 0 }` |
+| `GET` | `/api/recorder/config` | No | Returns `{ availableSlots, requestMic, maxDurationMinutes }` or `{ availableSlots: 0 }` |
 | `POST` | `/api/recorder/session` | No | Claim slot. Atomic check+decrement. Returns `{ sessionId }` (201), 409, or 404 |
-| `POST` | `/api/recorder/upload` | No | Upload chunk. Validates sessionId format, chunkIndex (non-negative int), max 10MB. FormData: `sessionId`, `chunkIndex`, `chunkTime`, `blob` |
-| `POST` | `/api/recorder/finalize` | No | Mark session finalized. Body: `{ sessionId }`. No slot release. |
-| `GET` | `/api/stream` | Yes | Stream merged recording. Params: `sessionId&merge=true` |
-| `GET` | `/api/playtests` | Yes | List all playtests (ordered by createdAt desc) |
-| `POST` | `/api/playtests` | Yes | Create playtest. Body: `{ name, availableSlots, requestMic? }` |
-| `PATCH` | `/api/playtests/:id` | Yes | Update playtest. Body: `{ name?, availableSlots?, requestMic? }` |
-| `GET` | `/api/sessions?playtestId=X` | Yes | List sessions for a playtest |
+| `POST` | `/api/recorder/upload` | No | Upload chunk. Validates sessionId format, chunkIndex (non-negative int), max per-chunk size. FormData: `sessionId`, `chunkIndex`, `chunkTime`, `blob`. Rejects chunks beyond 60-min time limit or 900-chunk limit. |
+| `GET` | `/api/stream` | Yes | Stream merged recording. Params: `sessionId` |
 
 ## Auth
 
 A single `ADMIN_TOKEN` env variable protects all dashboard content:
-- Everything under `/api/playtests`, `/api/sessions`, `/api/stream` requires the token
+- `/api/stream` requires the token
 - `/api/recorder/*`, `/api/health`, and `/recorder.js` are **public** (CORS, no auth)
-- Page routes check for token via cookie (`token=...`) or query param (`?token=...`)
+- Page routes check for token via cookie (`token=...`) or `admin-token` header
 - `/login` shows a simple token entry form; on success sets cookie and redirects to `/`
 
 ## Dashboard Pages
@@ -219,11 +211,8 @@ slaytester2/
 │   │       ├── recorder/
 │   │       │   ├── config.ts
 │   │       │   ├── session.ts
-│   │       │   ├── upload.ts
-│   │       │   └── finalize.ts
-│   │       ├── playtests.ts
-│   │       ├── playtests/[id].ts
-│   │       ├── sessions.ts
+│   │       │   └── upload.ts
+│   │       ├── health.ts
 │   │       └── stream.ts
 │   ├── components/
 │   │   ├── PageLayout.tsx
