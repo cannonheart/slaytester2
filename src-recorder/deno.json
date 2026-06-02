@@ -1,0 +1,11 @@
+{
+  "lock": false,
+  "imports": {
+    "$std/": "https://deno.land/std@0.216.0/",
+    "esbuild": "npm:esbuild@^0.25.2"
+  },
+  "lib": ["dom"],
+  "tasks": {
+    "build": "deno run -A ../src-recorder/build.ts"
+  }
+}
