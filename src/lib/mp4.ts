@@ -320,43 +320,34 @@ function buildTfra(track: TrackEntry, cumSizes: number[]): Uint8Array {
 }
 
 export async function mergeToStream(
-  chunks: Uint8Array[],
+  firstChunk: Uint8Array,
+  lastChunk: Uint8Array,
+  midChunks: AsyncIterable<Uint8Array>,
   controller: ReadableStreamDefaultController<Uint8Array>,
 ): Promise<void> {
-  // Parse mfra from last chunk before we modify anything
-  const mfraInfo = parseMfra(chunks[chunks.length - 1]);
+  // Parse mfra from last chunk
+  const mfraInfo = parseMfra(lastChunk);
 
-  // Compute stripped sizes for cumulative offset calculation
-  const chunkSizes: number[] = [];
-  for (let i = 0; i < chunks.length; i++) {
-    chunkSizes.push(i === 0 ? chunks[i].length : stripInitSegment(chunks[i]).length);
-  }
+  // Compute cumulative sizes: first chunk as-is, mid chunks stripped, last chunk stripped
+  const cumSizes: number[] = [0];
+  let running = firstChunk.length;
 
-  const cumSizes: number[] = [];
-  let running = 0;
-  for (const sz of chunkSizes) {
-    cumSizes.push(running);
-    running += sz;
-  }
+  // Compute exact total duration from tfdt
+  const mediaTimescale = readVideoTimescale(firstChunk);
+  let totalDur = readTfdt(lastChunk);
 
-  // Compute exact total duration from tfdt (in media timescale units)
-  const mediaTimescale = readVideoTimescale(chunks[0]);
-  let totalDur = computeTotalDuration(chunks);
-
-  // Read mvhd timescale for conversion
   let movieTimescale = 1000;
-  const moovOff = findBox(chunks[0], "moov");
+  const moovOff = findBox(firstChunk, "moov");
   if (moovOff !== -1) {
-    const mvhdOff = findBox(chunks[0], "mvhd", moovOff + 8);
+    const mvhdOff = findBox(firstChunk, "mvhd", moovOff + 8);
     if (mvhdOff !== -1) {
-      const version = chunks[0][mvhdOff + 8];
+      const version = firstChunk[mvhdOff + 8];
       const base = mvhdOff + 8 + 1 + 3;
       const tsOff = version === 1 ? base + 8 + 8 : base + 4 + 4;
-      movieTimescale = u32(chunks[0], tsOff);
+      movieTimescale = u32(firstChunk, tsOff);
     }
   }
 
-  // Convert tfdt total from media timescale to movie timescale
   if (totalDur > 0 && mediaTimescale > 0) {
     totalDur = Math.round(totalDur / mediaTimescale * movieTimescale);
   }
@@ -364,15 +355,25 @@ export async function mergeToStream(
     totalDur = movieTimescale * 1;
   }
 
-  // Enqueue all chunks
-  for (let i = 0; i < chunks.length; i++) {
-    if (i === 0) {
-      updateMoovDuration(chunks[i], totalDur);
-      controller.enqueue(chunks[i]);
-    } else {
-      controller.enqueue(stripInitSegment(chunks[i]));
-    }
+  // Enqueue first chunk (with updated duration)
+  updateMoovDuration(firstChunk, totalDur);
+  controller.enqueue(firstChunk);
+
+  // Enqueue middle chunks one at a time, accumulating sizes for mfra
+  const midSizes: number[] = [];
+  for await (const data of midChunks) {
+    const stripped = stripInitSegment(data);
+    cumSizes.push(running);
+    running += stripped.length;
+    midSizes.push(stripped.length);
+    controller.enqueue(stripped);
   }
+
+  // Enqueue last chunk (stripped)
+  const strippedLast = stripInitSegment(lastChunk);
+  cumSizes.push(running);
+  running += strippedLast.length;
+  controller.enqueue(strippedLast);
 
   // Append adjusted mfra if present
   if (mfraInfo && mfraInfo.tracks.length > 0) {
@@ -381,4 +382,60 @@ export async function mergeToStream(
   }
 
   controller.close();
+}
+
+export async function mergeToFile(
+  dest: Deno.FsFile,
+  firstChunk: Uint8Array,
+  lastChunk: Uint8Array,
+  midChunks: AsyncIterable<Uint8Array>,
+): Promise<void> {
+  const mfraInfo = parseMfra(lastChunk);
+
+  const cumSizes: number[] = [0];
+  let running = firstChunk.length;
+
+  const mediaTimescale = readVideoTimescale(firstChunk);
+  let totalDur = readTfdt(lastChunk);
+
+  let movieTimescale = 1000;
+  const moovOff = findBox(firstChunk, "moov");
+  if (moovOff !== -1) {
+    const mvhdOff = findBox(firstChunk, "mvhd", moovOff + 8);
+    if (mvhdOff !== -1) {
+      const version = firstChunk[mvhdOff + 8];
+      const base = mvhdOff + 8 + 1 + 3;
+      const tsOff = version === 1 ? base + 8 + 8 : base + 4 + 4;
+      movieTimescale = u32(firstChunk, tsOff);
+    }
+  }
+
+  if (totalDur > 0 && mediaTimescale > 0) {
+    totalDur = Math.round(totalDur / mediaTimescale * movieTimescale);
+  }
+  if (totalDur === 0 && movieTimescale > 0) {
+    totalDur = movieTimescale * 1;
+  }
+
+  const write = (buf: Uint8Array) => dest.write(buf);
+
+  updateMoovDuration(firstChunk, totalDur);
+  await write(firstChunk);
+
+  for await (const data of midChunks) {
+    const stripped = stripInitSegment(data);
+    cumSizes.push(running);
+    running += stripped.length;
+    await write(stripped);
+  }
+
+  const strippedLast = stripInitSegment(lastChunk);
+  cumSizes.push(running);
+  running += strippedLast.length;
+  await write(strippedLast);
+
+  if (mfraInfo && mfraInfo.tracks.length > 0) {
+    const mfra = buildMfra(mfraInfo.tracks, running, cumSizes);
+    await write(mfra);
+  }
 }

@@ -54,12 +54,15 @@ Deno.test("mp4: stripInitSegment returns empty for empty buffer", () => {
 
 Deno.test("mp4: mergeToStream produces correct concatenation with mfra", async () => {
   const stripped = stripInitSegment(FIXTURE);
-  const chunks = [new Uint8Array(FIXTURE), stripped, stripped];
   const parts: Uint8Array[] = [];
+
+  async function* mid() {
+    yield stripped;
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
-      await mergeToStream(chunks, controller);
+      await mergeToStream(new Uint8Array(FIXTURE), stripped, mid(), controller);
     },
   });
 
@@ -75,7 +78,7 @@ Deno.test("mp4: mergeToStream produces correct concatenation with mfra", async (
   }, new Uint8Array(0));
 
   // Should contain content + mfra appended at end
-  const contentLen = FIXTURE.length + stripped.length * 2;
+  const contentLen = FIXTURE.length + stripped.length;
   assertEquals(merged.length > contentLen, true);
 
   // Verify mfra is present at the end

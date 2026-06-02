@@ -1,4 +1,4 @@
-import { mergeToStream } from "../../lib/mp4.ts";
+import { mergeToFile } from "../../lib/mp4.ts";
 
 const SESSION_ID_RE = /^[a-zA-Z0-9_-]+$/;
 
@@ -50,35 +50,38 @@ export const handler = {
       return ai - bi;
     });
 
-    const chunks: Uint8Array[] = [];
-    for (const name of fileNames) {
-      const data = await Deno.readFile(`${dir}/${name}`);
-      chunks.push(data);
+    const firstChunk = await Deno.readFile(`${dir}/${fileNames[0]}`);
+    const lastChunk = await Deno.readFile(`${dir}/${fileNames[fileNames.length - 1]}`);
+
+    async function* readMid(): AsyncIterable<Uint8Array> {
+      for (let i = 1; i < fileNames.length - 1; i++) {
+        yield await Deno.readFile(`${dir}/${fileNames[i]}`);
+      }
     }
 
-    // Build full merged buffer so we can set Content-Length
-    const parts: Uint8Array[] = [];
-    const stream = new ReadableStream({
-      async start(controller) {
-        await mergeToStream(chunks, controller);
-      },
-    });
-    for await (const part of stream) {
-      parts.push(part as Uint8Array);
-    }
-    const merged = parts.reduce((a, b) => {
-      const c = new Uint8Array(a.length + b.length);
-      c.set(a);
-      c.set(b, a.length);
-      return c;
-    }, new Uint8Array(0));
+    // Write merged output to temp file so we can serve with Content-Length
+    const tmpPath = await Deno.makeTempFile({ suffix: ".mp4" });
+    const tmpFile = await Deno.open(tmpPath, { write: true });
+    try {
+      await mergeToFile(tmpFile, firstChunk, lastChunk, readMid());
+      tmpFile.close();
 
-    return new Response(merged, {
-      headers: {
-        "Content-Type": "video/mp4",
-        "Content-Length": String(merged.length),
-        "Accept-Ranges": "bytes",
-      },
-    });
+      const stat = await Deno.stat(tmpPath);
+      const body = await Deno.open(tmpPath);
+
+      // Schedule cleanup — file won't actually disappear until the readable fd closes
+      Deno.remove(tmpPath);
+
+      return new Response(body.readable, {
+        headers: {
+          "Content-Type": "video/mp4",
+          "Content-Length": String(stat.size),
+          "Accept-Ranges": "bytes",
+        },
+      });
+    } catch (err) {
+      Deno.remove(tmpPath).catch(() => {});
+      throw err;
+    }
   },
 };
