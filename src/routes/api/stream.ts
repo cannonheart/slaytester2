@@ -56,14 +56,29 @@ export const handler = {
       chunks.push(data);
     }
 
+    // Build full merged buffer so we can set Content-Length
+    const parts: Uint8Array[] = [];
     const stream = new ReadableStream({
       async start(controller) {
         await mergeToStream(chunks, controller);
       },
     });
+    for await (const part of stream) {
+      parts.push(part as Uint8Array);
+    }
+    const merged = parts.reduce((a, b) => {
+      const c = new Uint8Array(a.length + b.length);
+      c.set(a);
+      c.set(b, a.length);
+      return c;
+    }, new Uint8Array(0));
 
-    return new Response(stream, {
-      headers: { "Content-Type": "video/mp4" },
+    return new Response(merged, {
+      headers: {
+        "Content-Type": "video/mp4",
+        "Content-Length": String(merged.length),
+        "Accept-Ranges": "bytes",
+      },
     });
   },
 };

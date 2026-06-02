@@ -1,5 +1,5 @@
 import { assertEquals } from "$std/assert/mod.ts";
-import { findBox, readDuration, stripInitSegment, updateMoovDuration, mergeToStream, parseMfra } from "./mp4.ts";
+import { findBox, readDuration, stripInitSegment, updateMoovDuration, mergeToStream, parseMfra, computeTotalDuration, readTfdt } from "./mp4.ts";
 
 const FIXTURE = Deno.readFileSync(new URL("../testdata/chunk.mp4", import.meta.url));
 
@@ -36,7 +36,8 @@ Deno.test("mp4: stripInitSegment preserves moof and mdat", () => {
 
 Deno.test("mp4: updateMoovDuration changes duration", () => {
   const copy = new Uint8Array(FIXTURE);
-  updateMoovDuration(copy, 5);
+  // Fixture timescale is 1000, so passing 5000 = 5 seconds
+  updateMoovDuration(copy, 5000);
   assertEquals(readDuration(copy), 5);
 });
 
@@ -80,6 +81,22 @@ Deno.test("mp4: mergeToStream produces correct concatenation with mfra", async (
   // Verify mfra is present at the end
   const mfraOff = findBox(merged, "mfra");
   assertEquals(mfraOff > 0, true);
+});
+
+Deno.test("mp4: readTfdt returns 0 for first chunk", () => {
+  assertEquals(readTfdt(FIXTURE), 0);
+});
+
+Deno.test("mp4: computeTotalDuration uses last chunk's tfdt", () => {
+  const stripped = stripInitSegment(FIXTURE);
+  const chunks = [new Uint8Array(FIXTURE), stripped, stripped];
+  // All chunks have the same last moof's tfdt=0 since fixture has one fragment
+  const dur = computeTotalDuration(chunks);
+  assertEquals(dur, readTfdt(stripped));
+});
+
+Deno.test("mp4: computeTotalDuration returns 0 for single chunk", () => {
+  assertEquals(computeTotalDuration([FIXTURE]), 0);
 });
 
 Deno.test("mp4: parseMfra reads fixture correctly", () => {

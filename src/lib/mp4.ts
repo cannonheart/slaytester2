@@ -59,7 +59,56 @@ export function readDuration(buf: Uint8Array): number {
   return duration / timescale;
 }
 
-export function updateMoovDuration(buf: Uint8Array, chunkCount: number): void {
+export function readTfdt(buf: Uint8Array): number {
+  let off = 0;
+  let lastMoof = -1;
+  while (off < buf.length - 8) {
+    const mf = findBox(buf, "moof", off);
+    if (mf === -1) break;
+    lastMoof = mf;
+    off = mf + boxSize(buf, mf);
+  }
+  if (lastMoof === -1) return 0;
+
+  const trafOff = findBox(buf, "traf", lastMoof + 8);
+  if (trafOff === -1) return 0;
+  const tfdtOff = findBox(buf, "tfdt", trafOff + 8);
+  if (tfdtOff === -1) return 0;
+
+  const version = buf[tfdtOff + 8];
+  const timeOff = tfdtOff + 12;
+  return version === 1
+    ? Number((BigInt(u32(buf, timeOff)) << 32n) | BigInt(u32(buf, timeOff + 4)))
+    : u32(buf, timeOff);
+}
+
+export function readVideoTimescale(buf: Uint8Array): number {
+  const moovOff = findBox(buf, "moov");
+  if (moovOff === -1) return 1000;
+
+  // Find first trak → mdia → mdhd
+  const firstTrak = findBox(buf, "trak", moovOff + 8);
+  if (firstTrak === -1) return 1000;
+  const mdiaOff = findBox(buf, "mdia", firstTrak + 8);
+  if (mdiaOff === -1) return 1000;
+  const mdhdOff = findBox(buf, "mdhd", mdiaOff + 8);
+  if (mdhdOff === -1) return 1000;
+
+  const version = buf[mdhdOff + 8];
+  const base = mdhdOff + 12;
+  const tsOff = version === 1 ? base + 8 + 8 : base + 4 + 4;
+  const ts = u32(buf, tsOff);
+  return ts > 0 ? ts : 1000;
+}
+
+export function computeTotalDuration(chunks: Uint8Array[]): number {
+  if (chunks.length <= 1) return 0;
+
+  // Use the last chunk's tfdt as the total duration in media timescale units
+  return readTfdt(chunks[chunks.length - 1]);
+}
+
+export function updateMoovDuration(buf: Uint8Array, duration: number): void {
   const moovOff = findBox(buf, "moov");
   if (moovOff === -1) return;
 
@@ -80,7 +129,7 @@ export function updateMoovDuration(buf: Uint8Array, chunkCount: number): void {
   }
 
   const timescale = u32(buf, timescaleOff);
-  const newDuration = timescale * chunkCount;
+  const newDuration = duration; // already in timescale units
 
   const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
   if (version === 1) {
@@ -282,10 +331,35 @@ export async function mergeToStream(
     running += sz;
   }
 
+  // Compute exact total duration from tfdt (in media timescale units)
+  const mediaTimescale = readVideoTimescale(chunks[0]);
+  let totalDur = computeTotalDuration(chunks);
+
+  // Read mvhd timescale for conversion
+  let movieTimescale = 1000;
+  const moovOff = findBox(chunks[0], "moov");
+  if (moovOff !== -1) {
+    const mvhdOff = findBox(chunks[0], "mvhd", moovOff + 8);
+    if (mvhdOff !== -1) {
+      const version = chunks[0][mvhdOff + 8];
+      const base = mvhdOff + 8 + 1 + 3;
+      const tsOff = version === 1 ? base + 8 + 8 : base + 4 + 4;
+      movieTimescale = u32(chunks[0], tsOff);
+    }
+  }
+
+  // Convert tfdt total from media timescale to movie timescale
+  if (totalDur > 0 && mediaTimescale > 0) {
+    totalDur = Math.round(totalDur / mediaTimescale * movieTimescale);
+  }
+  if (totalDur === 0 && movieTimescale > 0) {
+    totalDur = movieTimescale * 1;
+  }
+
   // Enqueue all chunks
   for (let i = 0; i < chunks.length; i++) {
     if (i === 0) {
-      updateMoovDuration(chunks[i], chunks.length);
+      updateMoovDuration(chunks[i], totalDur);
       controller.enqueue(chunks[i]);
     } else {
       controller.enqueue(stripInitSegment(chunks[i]));
