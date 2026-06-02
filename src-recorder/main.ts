@@ -193,11 +193,16 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
     filler.start();
 
     function bridgeGameStream(gs: MediaStream) {
-      const bridge = audioCtx.createMediaStreamSource(gs);
-      bridge.connect(captureDest);
-      console.log("[Slaytester] bridged game audio to recorder");
+      try {
+        const bridge = audioCtx.createMediaStreamSource(gs);
+        bridge.connect(captureDest);
+        console.log("[Slaytester] bridged game audio to recorder");
+      } catch (err) {
+        console.error("[Slaytester] failed to bridge game audio:", err);
+      }
     }
 
+    // Poll for game audio context that may init after the recorder starts
     const initialStream = retroactivelyCapture(captureDest);
     if (initialStream) {
       bridgeGameStream(initialStream);

@@ -86,7 +86,9 @@ export function retroactivelyCapture(cd: AudioNode): MediaStream | null {
     for (const conn of conns) {
       try {
         origConnect.call(conn.source, tap, conn.output, 0);
-      } catch {}
+      } catch (err) {
+        console.warn("[Slaytester] bridge connection failed:", err);
+      }
     }
     return gameDest.stream;
   }
