@@ -23,10 +23,6 @@ export function isAuthorized(req: Request): boolean {
     if (name === "token" && checkToken(rest.join("="))) return true;
   }
 
-  const url = new URL(req.url);
-  const query = url.searchParams.get("token");
-  if (query && checkToken(query)) return true;
-
   return false;
 }
 

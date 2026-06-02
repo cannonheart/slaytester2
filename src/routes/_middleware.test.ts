@@ -112,13 +112,6 @@ Deno.test("Middleware: allows / with valid token cookie", async () => {
   assertEquals(resp.status, 200);
 });
 
-Deno.test("Middleware: allows /playtest/xyz with valid token query", async () => {
-  resetAuthRateLimits();
-  const req = new Request("http://test/playtest/xyz?token=dev");
-  const resp = await handler(mockCtx(req));
-  assertEquals(resp.status, 200);
-});
-
 Deno.test("Middleware: allows / with valid token header", async () => {
   resetAuthRateLimits();
   const req = new Request("http://test/", {

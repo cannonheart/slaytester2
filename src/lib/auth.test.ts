@@ -30,11 +30,6 @@ Deno.test("Auth: isAuthorized checks cookie", () => {
   assertEquals(isAuthorized(req), true);
 });
 
-Deno.test("Auth: isAuthorized checks query param", () => {
-  const req = new Request("http://test/?token=dev");
-  assertEquals(isAuthorized(req), true);
-});
-
 Deno.test("Auth: isAuthorized returns false with no auth", () => {
   const req = new Request("http://test/");
   assertEquals(isAuthorized(req), false);
