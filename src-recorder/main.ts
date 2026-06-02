@@ -58,6 +58,10 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
               startRecording(config, sessionId, null);
               return;
             }
+            if (!navigator.mediaDevices) {
+              showMicNotAvailable(config);
+              return;
+            }
             showMicConsentPopup(config, () => {
               navigator.mediaDevices.getUserMedia({ audio: true })
                 .then((stream) => {
@@ -84,6 +88,31 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
       }, () => console.log("[Slaytester] recording declined by user"));
     })
     .catch((err) => console.error("[Slaytester] failed to fetch config:", err));
+
+  function showMicNotAvailable(config: Record<string, unknown>) {
+    const overlay = document.createElement("div");
+    overlay.className = "st-overlay";
+    const card = document.createElement("div");
+    card.className = "st-card";
+    const p = document.createElement("p");
+    p.className = "st-text";
+    p.textContent = "Microphone access requires HTTPS or getting served from localhost. Recording without mic.";
+    card.appendChild(p);
+    const btn = document.createElement("button");
+    btn.className = "st-btn-yes st-btn";
+    btn.textContent = "OK";
+    btn.addEventListener("click", () => document.body.removeChild(overlay));
+    card.appendChild(btn);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    const styleId = "st-style";
+    if (!document.getElementById(styleId)) {
+      const el = document.createElement("style");
+      el.id = styleId;
+      el.textContent = config.css as string;
+      document.head.appendChild(el);
+    }
+  }
 
   function showFullMessage(config: Record<string, unknown>) {
     const overlay = document.createElement("div");
