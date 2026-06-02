@@ -2,24 +2,9 @@ import { getDb } from "../../../db/db.ts";
 import { sessions } from "../../../db/schema.ts";
 import { eq } from "drizzle-orm";
 
-const MAX_CHUNK_SIZE = (() => {
-  const mb = Deno.env.get("MAX_CHUNK_SIZE_MB");
-  if (!mb) throw new Error("MAX_CHUNK_SIZE_MB env var is required");
-  return parseInt(mb, 10) * 1024 * 1024;
-})();
-
-const MAX_DURATION_MS = (() => {
-  const min = Deno.env.get("RECORDING_MAX_DURATION_MINUTES");
-  if (!min) throw new Error("RECORDING_MAX_DURATION_MINUTES env var is required");
-  return parseInt(min, 10) * 60 * 1000;
-})();
-
-const MAX_CHUNKS = (() => {
-  const v = Deno.env.get("RECORDING_MAX_CHUNKS");
-  if (!v) throw new Error("RECORDING_MAX_CHUNKS env var is required");
-  return parseInt(v, 10);
-})();
-
+const MAX_CHUNK_SIZE = parseInt(Deno.env.get("MAX_CHUNK_SIZE_MB")!, 10) * 1024 * 1024;
+const MAX_DURATION_MS = parseInt(Deno.env.get("RECORDING_MAX_DURATION_MINUTES")!, 10) * 60 * 1000;
+const MAX_CHUNKS = parseInt(Deno.env.get("RECORDING_MAX_CHUNKS")!, 10);
 const SESSION_ID_RE = /^[a-zA-Z0-9_-]+$/;
 
 let _recordingsDir: string | null = null;

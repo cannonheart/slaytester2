@@ -25,3 +25,22 @@ function loadDotenv(): void {
 }
 
 loadDotenv();
+
+const REQUIRED = [
+  ["ADMIN_TOKEN", ""],
+  ["RECORDING_MAX_DURATION_MINUTES", "60"],
+  ["RECORDING_MAX_CHUNKS", "900"],
+  ["MAX_CHUNK_SIZE_MB", "10"],
+] as const;
+
+for (const [name, fallback] of REQUIRED) {
+  if (!Deno.env.get(name)) {
+    if (fallback) {
+      Deno.env.set(name, fallback);
+      console.error(`[Slaytester] ${name} not set, using default: ${fallback}`);
+    } else {
+      console.error(`[Slaytester] Missing required env var: ${name}`);
+      Deno.exit(1);
+    }
+  }
+}
