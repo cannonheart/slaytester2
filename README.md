@@ -1,17 +1,17 @@
 # Slaytester 2
 
-A player writing a commend with feedback is good, but seeing a player spectacularly fail to find the end of the level is enlightening.
+A player writing a comment with feedback is good, but seeing a player spectacularly fail to find the end of the level is enlightening.
 
-Slaytester lets players record themselves playing your webgame with the click of a button.  
+Slaytester lets players record themselves playing your webgame with the click of a button.
 
-You insert a single line of html into your game, and Slaytester takes it from there.
+You install Slaytester on your own server, click a button to set up a playtest and copy a single line of html into your game's `index.html`. 
 
 Slaytester records (after clearly asking for consent):
 - the games canvas element
 - the games audio
 - the players mic (if the player wants to) (and if you have enabled it)
 
-This is useful for:
+Slaytester is useful for:
 - when you want people to record themselves playing your game, but without the hassle of setting up OBS
 - when you want randos to be able to easily comment on their mic as they play the game
 - checking if your update fixed that puzzle everyone had trouble with
