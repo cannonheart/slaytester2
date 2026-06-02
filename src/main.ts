@@ -8,6 +8,6 @@ export const app = new App()
 await app.fsRoutes();
 
 if (import.meta.main) {
-  const port = Number(Deno.env.get("PORT") || "8000");
+  const port = Number(Deno.env.get("PORT") || "5147");
   Deno.serve({ port }, app.handler());
 }
