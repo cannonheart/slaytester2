@@ -81,8 +81,8 @@ export const handler = {
         const last = await Deno.readFile(`${dir}/${files[files.length - 1]}`);
         duration = computeDurationFromChunks(first, last);
       }
-    } catch {
-      // No chunks found — duration stays 0
+    } catch (e) {
+      console.error(`[Slaytester] Failed to read chunks for session ${id}:`, e);
     }
 
     return ctx.render(page(session, name, duration));

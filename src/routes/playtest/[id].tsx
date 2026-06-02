@@ -136,7 +136,9 @@ export const handler = {
           const last = Deno.readFileSync(`${dir}/${files[files.length - 1]}`);
           s.duration = computeDurationFromChunks(first, last);
         }
-      } catch {}
+      } catch (e) {
+        console.error(`[Slaytester] Failed to read chunks for session ${s.id}:`, e);
+      }
     }
 
     return ctx.render(

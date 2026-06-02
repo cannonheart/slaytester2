@@ -36,7 +36,8 @@ export const handler = {
           fileNames.push(entry.name);
         }
       }
-    } catch {
+    } catch (e) {
+      console.error(`[Slaytester] Failed to read chunks for session ${sessionId}:`, e);
       return Response.json({ error: "Session not found" }, { status: 404 });
     }
 
