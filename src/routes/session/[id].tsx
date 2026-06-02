@@ -19,7 +19,6 @@ function page(session: any, playtestName: string) {
         <h1 class="text-4xl font-bold mb-2">{playtestName}</h1>
         <p class="text-sm text-gray-500 mb-8">
           Session {session.id.slice(0, 8)} &middot;{" "}
-          <span class="capitalize">{session.status}</span> &middot;{" "}
           {session.chunkCount} chunks &middot;{" "}
           {formatDate(session.createdAt)}
         </p>

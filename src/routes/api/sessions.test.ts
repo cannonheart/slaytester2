@@ -36,13 +36,11 @@ Deno.test("Sessions API: lists sessions for a playtest", async () => {
     id: "s-1",
     playtestId: "pt-1",
     createdAt: 100,
-    status: "recording",
   }).run();
   await db.insert(sessions).values({
     id: "s-2",
     playtestId: "pt-1",
     createdAt: 200,
-    status: "finalized",
   }).run();
 
   const req = new Request("http://test/api/sessions?playtestId=pt-1");

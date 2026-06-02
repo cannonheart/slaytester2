@@ -56,31 +56,6 @@ Deno.test("Session page: GET returns 200 with video player", async () => {
   assertStringIncludes(text, "controls");
 });
 
-Deno.test("Session page: shows finalized status", async () => {
-  resetDb(":memory:");
-  const db = resetDb(":memory:");
-  await push(db);
-  await db.insert(playtests).values({
-    id: "pt-1",
-    name: "Test",
-    availableSlots: 5,
-    requestMic: 1,
-    createdAt: Date.now(),
-  }).run();
-  await db.insert(sessions).values({
-    id: "s-1",
-    playtestId: "pt-1",
-    createdAt: Date.now(),
-    status: "finalized",
-  }).run();
-
-  const req = new Request("http://test/session/s-1");
-  const resp = await handler.GET(mockCtx(req, { id: "s-1" }));
-  assertEquals(resp.status, 200);
-  const text = await resp.text();
-  assertStringIncludes(text, "finalized");
-});
-
 Deno.test("Session page: returns 404 for missing session", async () => {
   resetDb(":memory:");
   await push(resetDb(":memory:"));

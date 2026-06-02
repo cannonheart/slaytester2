@@ -12,7 +12,6 @@ export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
   playtestId: text("playtest_id").notNull(),
   createdAt: integer("created_at").notNull(),
-  status: text("status").notNull().default("recording"),
   chunkCount: integer("chunk_count").default(0),
   duration: real("duration"),
 });

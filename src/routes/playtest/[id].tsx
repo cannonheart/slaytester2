@@ -57,7 +57,6 @@ function Page({ pt, sessions, base }: { pt: any; sessions: any[]; base: string }
               <table class="w-full">
                 <thead>
                   <tr class="border-b">
-                    <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Status</th>
                     <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Chunks</th>
                     <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Created</th>
                     <th class="px-6 py-3"></th>
@@ -66,7 +65,6 @@ function Page({ pt, sessions, base }: { pt: any; sessions: any[]; base: string }
                 <tbody>
                   {sessions.map((s) => (
                     <tr class="border-b last:border-b-0">
-                      <td class="px-6 py-4 text-sm">{s.status}</td>
                       <td class="px-6 py-4 text-sm text-gray-500">{s.chunkCount ?? 0}</td>
                       <td class="px-6 py-4 text-sm text-gray-500">
                         {new Date(s.createdAt).toLocaleDateString("en-US", {

@@ -48,7 +48,6 @@ Deno.test("Schema: sessions insert and select roundtrip", async () => {
 
   const row = await db.select().from(sessions).where(eq(sessions.id, sessionId)).get();
   assertEquals(row?.playtestId, playtestId);
-  assertEquals(row?.status, "recording");
   assertEquals(row?.chunkCount, 0);
   assertEquals(row?.duration, null);
 });
@@ -74,6 +73,5 @@ Deno.test("Schema: default values on sessions", async () => {
 
   const rows = await db.select().from(sessions).all();
   assertEquals(rows.length, 1);
-  assertEquals(rows[0].status, "recording");
   assertEquals(rows[0].chunkCount, 0);
 });

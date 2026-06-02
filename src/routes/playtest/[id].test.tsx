@@ -65,13 +65,11 @@ Deno.test("Playtest detail: GET shows sessions when they exist", async () => {
     id: "s-1",
     playtestId: "pt-1",
     createdAt: Date.now(),
-    status: "recording",
   }).run();
   await db.insert(sessions).values({
     id: "s-2",
     playtestId: "pt-1",
     createdAt: Date.now() - 10000,
-    status: "finalized",
   }).run();
 
   const req = new Request("http://test/playtest/pt-1");
@@ -79,8 +77,6 @@ Deno.test("Playtest detail: GET shows sessions when they exist", async () => {
   assertEquals(resp.status, 200);
   const text = await resp.text();
   assertStringIncludes(text, "Sessions");
-  assertStringIncludes(text, "recording");
-  assertStringIncludes(text, "finalized");
 });
 
 Deno.test("Playtest detail: GET shows not found for missing ID", async () => {

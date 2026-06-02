@@ -211,10 +211,6 @@ import { defaultRecorderConfig } from "../src/lib/default-recorder-conf.ts";
 
     addEventListener("beforeunload", () => {
       if (handle) handle.stop();
-      navigator.sendBeacon(
-        `${BASE}/api/recorder/finalize`,
-        new Blob([JSON.stringify({ sessionId })], { type: "application/json" }),
-      );
     });
   }
 })();
