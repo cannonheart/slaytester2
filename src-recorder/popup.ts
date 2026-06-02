@@ -75,29 +75,13 @@ export function showConsentPopup(
 
   addParagraph(card, config.popupText);
 
-  const checkboxDiv = document.createElement("div");
-  checkboxDiv.className = "st-checkbox";
-  const cb = document.createElement("input");
-  cb.type = "checkbox";
-  cb.id = "st-consent";
-  const label = document.createElement("label");
-  label.htmlFor = "st-consent";
-  label.appendChild(document.createTextNode("I agree to "));
-
-  const yesBtn = addButtons(
-    card,
-    config.popupYes,
-    config.popupNo,
-    () => {
-      cleanup();
-      onYes();
-    },
-    () => {
-      cleanup();
-      onNo();
-    },
-    true,
-  );
+  addButtons(card, config.popupYes, config.popupNo, () => {
+    cleanup();
+    onYes();
+  }, () => {
+    cleanup();
+    onNo();
+  });
 
   const footer = document.createElement("p");
   footer.className = "st-footer";
