@@ -98,20 +98,20 @@ await db.transaction(async (tx) => {
 2. **Check config** — `GET {BASE}/api/recorder/config?playtestId=X`
    - Returns `{ availableSlots, requestMic }` if slots > 0
    - Returns `{ availableSlots: 0 }` if slots exhausted → exit silently
-3. **Consent popup** — Show consent overlay. If declined → exit.
+3. **Consent popup** — Show consent overlay (text + yes/no buttons, no privacy policy links). If declined → exit.
 4. **Claim slot** — `POST {BASE}/api/recorder/session { playtestId }`
    - Server does an **atomic check**: read playtest, if `availableSlots > 0`, decrement and return `{ sessionId }`. Otherwise `409 Conflict`.
    - On 409, show "Playtest is full" message
 5. **Mic setup** — If `requestMic === true`, mic consent + mic check flow. Otherwise skip.
 6. **Canvas capture** — Find first `<canvas>`, call `captureStream(30)` for video track
-7. **Audio capture** — Patch `AudioContext` via audio proxy. Route game audio + mic into a `MediaStreamAudioDestinationNode`
-8. **Record** — `MediaRecorder(stream, {mimeType: "video/mp4"})`, fire `ondataavailable` every 1s
+7. **Audio capture** — Patch `AudioContext` via audio proxy. Patches `createScriptProcessor`, `createGain`, `createBufferSource`, etc. to track game audio contexts. Polls for late-initializing contexts (e.g., PICO-8's ScriptProcessor). Routes game audio + mic into a `MediaStreamAudioDestinationNode`.
+8. **Record** — `MediaRecorder(stream, {mimeType: "video/mp4;codecs=avc3"})`, fires `ondataavailable` every 1s
 9. **Upload** — Each chunk → `POST {BASE}/api/recorder/upload` as `FormData { sessionId, chunkIndex, chunkTime, blob }`
    - Accepted: 200
    - Validation: `chunkIndex` must be a non-negative integer (prevents path traversal)
    - Filesize: max 10MB per chunk (returns 413)
    - `sessionId` must match `^[a-zA-Z0-9_-]+$` (prevents path traversal)
-10. **Finalize** — On `beforeunload`, `POST {BASE}/api/recorder/finalize { sessionId }`
+10. **Finalize** — On `beforeunload`, `POST {BASE}/api/recorder/finalize { sessionId }` via `sendBeacon` with `Content-Type: application/json`
     - Best-effort. If the browser crashes, the session stays `"recording"` forever. No slot is released.
 
 ## Playtest Capacity
@@ -162,7 +162,7 @@ A single `ADMIN_TOKEN` env variable protects all dashboard content:
 | `/login` | No | Token entry form (shared components: PageLayout, Card, Heading, Input, Button) |
 | `/` | Yes | Playtest list — name, slots remaining, created date, View link. Create form (name + slots + Create button via POST) |
 | `/playtest/:id` | Yes | Single settings card: name input, slots input, requestMic checkbox, Save button. Embed code snippet (auto-derived from `ctx.url.origin`). Sessions table (status, chunks, date, Watch link) |
-| `/session/:id` | Yes | Video playback via Playback island |
+| `/session/:id` | Yes | Video playback via native `<video controls>` pointing to `/api/stream?sessionId=X` |
 
 ## Filesystem Storage
 
@@ -176,7 +176,7 @@ data/
       ...
 ```
 
-Playback merges chunks server-side: find the first valid chunk with a `moov` box, update its duration metadata, then stream all remaining chunks with init segments stripped.
+Playback merges chunks server-side: reads all chunk files, parses `tfdt` (Track Fragment Decode Time) to compute exact total duration in media timescale, converts to movie timescale and updates `mvhd` + `tkhd` duration fields. Strips init segments (ftyp/moov) from subsequent chunks. Appends rebuilt `mfra` box with adjusted `tfra` byte offsets for Safari seeking support. Serves with `Content-Length` and `Accept-Ranges: bytes` for proper browser timeline and seek support.
 
 ## Shared Components (`src/components/`)
 
@@ -203,7 +203,9 @@ slaytester2/
 │   │   └── push.ts                # CREATE TABLE IF NOT EXISTS
 │   ├── lib/
 │   │   ├── env.ts                 # .env loader
-│   │   └── auth.ts                # Token check
+│   │   ├── auth.ts                # Token check
+│   │   ├── mp4.ts                 # MP4 box parsing, tfdt duration, mfra rebuild, mergeToStream
+│   │   └── default-recorder-conf.ts  # Popup CSS, text defaults, bitrate, fps
 │   ├── routes/
 │   │   ├── _app.tsx               # HTML shell + stylesheet
 │   │   ├── _middleware.ts         # CORS + token auth
@@ -211,7 +213,7 @@ slaytester2/
 │   │   ├── login.tsx              # Token entry via ctx.render()
 │   │   ├── index.tsx              # Dashboard — playtest list + create
 │   │   ├── playtest/[id].tsx      # Playtest detail — settings, embed, sessions
-│   │   ├── session/[id].tsx       # Playback page (not yet built)
+│   │   ├── session/[id].tsx       # Playback page via native <video controls>
 │   │   └── api/
 │   │       ├── health.ts
 │   │       ├── recorder/
@@ -223,7 +225,6 @@ slaytester2/
 │   │       ├── playtests/[id].ts
 │   │       ├── sessions.ts
 │   │       └── stream.ts
-│   ├── islands/
 │   ├── components/
 │   │   ├── PageLayout.tsx
 │   │   ├── Card.tsx
@@ -233,7 +234,13 @@ slaytester2/
 │   │   └── Checkbox.tsx
 │   └── static/
 │       └── styles.css             # @import "tailwindcss"
-├── src-recorder/                  # Client-side recorder (not yet built)
+├── src-recorder/
+│   ├── main.ts                    # Recorder entry: load, config, consent, slot claim, mic, capture, record, upload, finalize
+│   ├── capture.ts                 # Canvas capture + MediaRecorder + chunk upload
+│   ├── popup.ts                   # Consent overlay (no privacy policy links)
+│   ├── audio-proxy.ts             # AudioContext patching + late-initialization polling
+│   ├── build.ts                   # esbuild bundler config
+│   └── deno.json
 ├── data/
 │   ├── slaytester.db              # Auto-created by getDb()
 │   └── recordings/
@@ -242,19 +249,18 @@ slaytester2/
 └── .gitignore
 ```
 
-## Reused Code from slaytester
+## Source Changes from slaytester
 
-| File | Modification |
+| File | Changes |
 |---|---|
-| `src-recorder/main.ts` | Replace `versionKey` → `playtestId`, add slot claim step, add `requestMic` gate, update API URL paths |
-| `src-recorder/capture.ts` | Update upload URL → `/api/recorder/upload` |
-| `src-recorder/popup.ts` | Unchanged |
-| `src-recorder/audio-proxy.ts` | Unchanged |
-| `src-recorder/build.ts` | Unchanged (esbuild config) |
-| `src/lib/mp4.ts` | Unchanged |
+| `src-recorder/main.ts` | `versionKey` → `playtestId`, add slot claim step, add `requestMic` gate, update API URL paths, `sendBeacon` with `application/json` Blob |
+| `src-recorder/capture.ts` | Remove `versionKey`, update upload URL → `/api/recorder/upload`, prefer `avc3` codec |
+| `src-recorder/popup.ts` | Remove privacy policy links, remove consent checkbox/disabled yes button |
+| `src-recorder/audio-proxy.ts` | Add `createScriptProcessor` to override list, track tapped contexts with `WeakSet` |
+| `src-recorder/build.ts` | Unchanged |
+| `src/lib/mp4.ts` | Add `readVideoTimescale`, `computeTotalDuration` (tfdt-based), `readTfdt` (reads last moof), mfra parsing/building |
 | `src/lib/env.ts` | Unchanged |
-| `src/lib/default-recorder-conf.ts` | Unchanged |
-| `src/islands/Playback.tsx` | Update stream URL → `/api/stream?sessionId=X` |
+| `src/lib/default-recorder-conf.ts` | Copied from old slaytester, unchanged |
 | `src/db/schema.ts` | New — Drizzle SQLite schema |
 | `src/db/db.ts` | New — singleton with auto-push + test override |
 | `src/db/push.ts` | New — CREATE TABLE on startup |
@@ -269,13 +275,17 @@ That's it — one env var. SQLite database file lives at `data/slaytester.db` (a
 
 ## Test Suite
 
-- **90 tests total**, all passing
+- **110 tests total**, all passing
 - Test pattern: `Deno.test()`, `assertEquals`/`assertStringIncludes` from `$std/assert`
 - DB tests use `resetDb()` with temp file paths for transaction-isolated tests
 - Auth tests use middleware handler directly (mock `ctx.next()`)
 - Component tests render with `preact-render-to-string` and check output
 - API handler tests mock `ctx` with `{ req, url, state, params, render }`
 
+## Out of Scope (v1)
+
+- Multi-user / teams
+- Email / magic links
+- Recording editing or trimming
 - Live streaming / real-time watch
 - Background chunk-stitching job
-- Privacy policy page
