@@ -56,7 +56,7 @@ Deno.test("Login: POST with empty token returns 400", async () => {
   assertEquals(resp.status, 400);
 });
 
-Deno.test("Login: POST with wrong token returns 200", async () => {
+Deno.test("Login: POST with wrong token returns 200 with error", async () => {
   resetAuthRateLimits();
   const form = new FormData();
   form.set("token", "wrong-token");
@@ -66,6 +66,8 @@ Deno.test("Login: POST with wrong token returns 200", async () => {
   });
   const resp = await handler.POST(mockCtx(req));
   assertEquals(resp.status, 200);
+  const text = await resp.text();
+  assertStringIncludes(text, "Invalid");
 });
 
 Deno.test("Login: rate limits after 5 failed attempts", async () => {

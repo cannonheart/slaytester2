@@ -38,7 +38,7 @@ export const handler = {
       if (!checkAuthRateLimit(ip)) return new Response(null, { status: 429 });
       recordFailedAuth(ip);
 
-      return new Response(null, { status: 200 });
+      return ctx.render(<LoginPage error="Invalid token" />);
     }
 
     return new Response(null, {
