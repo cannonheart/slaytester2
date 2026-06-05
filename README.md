@@ -16,6 +16,7 @@ Slaytester is useful for:
 - when you want randos to be able to easily comment on their mic as they play the game
 - checking if your update fixed that puzzle everyone had trouble with
 
+## Please be aware this project is in early alpha, and may or may not be developed further. I'd be happy if you tried it and gave some feedback :)
 
 ## Installation
 This guide expects you to have a basic understanding of web stuff. If you don't, please send me a message and I'll help you set it up.
